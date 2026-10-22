@@ -1,0 +1,45 @@
+{
+  "name": "cron-explain",
+  "version": "0.1.0",
+  "description": "Parse, validate and explain cron expressions in plain English and Turkish, with next run times and time zone support",
+  "type": "module",
+  "bin": {
+    "cron-explain": "./bin/cron-explain.js"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./locales/*": "./locales/*"
+  },
+  "scripts": {
+    "test": "node --test",
+    "lint": "node scripts/check-syntax.js"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YusufBeratZengin/cron-explain.git"
+  },
+  "bugs": {
+    "url": "https://github.com/YusufBeratZengin/cron-explain/issues"
+  },
+  "homepage": "https://github.com/YusufBeratZengin/cron-explain#readme",
+  "keywords": [
+    "cron",
+    "cron-parser",
+    "cron-validator",
+    "cron-explainer",
+    "crontab",
+    "quartz",
+    "timezone",
+    "dst",
+    "turkish",
+    "english",
+    "zero-dependencies"
+  ],
+  "author": "Yusuf Berat Zengin <118852217+YusufBeratZengin@users.noreply.github.com>",
+  "license": "MIT",
+  "dependencies": {}
+}
