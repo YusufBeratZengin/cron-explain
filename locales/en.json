@@ -1,0 +1,73 @@
+{
+  "aliases": {
+    "@yearly": "At 00:00 on January 1",
+    "@annually": "At 00:00 on January 1",
+    "@monthly": "At 00:00 on the 1st day of every month",
+    "@weekly": "At 00:00 on Sunday",
+    "@daily": "At 00:00 every day",
+    "@midnight": "At 00:00 every day",
+    "@hourly": "At minute 0 of every hour",
+    "@reboot": "At system startup"
+  },
+  "fields": {
+    "second": "second",
+    "minute": "minute",
+    "hour": "hour",
+    "dayOfMonth": "day of month",
+    "month": "month",
+    "dayOfWeek": "day of week",
+    "year": "year"
+  },
+  "months": [
+    "",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December"
+  ],
+  "daysOfWeek": [
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday"
+  ],
+  "phrases": {
+    "everySecond": "Every second",
+    "everyMinute": "Every minute",
+    "everyHour": "Every hour",
+    "everyDay": "Every day",
+    "everyMonth": "Every month",
+    "everyYear": "Every year",
+    "everyNSeconds": "Every {step} seconds",
+    "everyNMinutes": "Every {step} minutes",
+    "everyNHours": "Every {step} hours",
+    "atMinute": "At minute {minutes}",
+    "atTime": "At {time}",
+    "betweenHours": "between {start} and {end}",
+    "onDaysOfWeek": "{days}",
+    "onDaysOfMonth": "on day {days} of the month",
+    "inMonths": "in {months}",
+    "inYears": "in {years}",
+    "lastDayOfMonth": "on the last day of the month",
+    "lastWeekdayOfMonth": "on the last weekday of the month",
+    "daysBeforeEndOfMonth": "{offset} days before the end of the month",
+    "nearestWeekday": "on the nearest weekday to day {day} of the month",
+    "lastWeekdayOccurrence": "on the last {dayOfWeek} of the month",
+    "nthWeekdayOccurrence": "on the {ordinal} {dayOfWeek} of the month",
+    "rebootDescription": "Runs only on system reboot (no scheduled run times)",
+    "separator": ", ",
+    "and": " and ",
+    "through": " through "
+  }
+}

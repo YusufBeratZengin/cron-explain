@@ -1,0 +1,73 @@
+{
+  "aliases": {
+    "@yearly": "Her yıl 1 Ocak'ta saat 00:00'da",
+    "@annually": "Her yıl 1 Ocak'ta saat 00:00'da",
+    "@monthly": "Her ayın 1. gününde saat 00:00'da",
+    "@weekly": "Her Pazar saat 00:00'da",
+    "@daily": "Her gün saat 00:00'da",
+    "@midnight": "Her gün saat 00:00'da",
+    "@hourly": "Her saatin başında",
+    "@reboot": "Sistem başlangıcında"
+  },
+  "fields": {
+    "second": "saniye",
+    "minute": "dakika",
+    "hour": "saat",
+    "dayOfMonth": "ayın günü",
+    "month": "ay",
+    "dayOfWeek": "haftanın günü",
+    "year": "yıl"
+  },
+  "months": [
+    "",
+    "Ocak",
+    "Şubat",
+    "Mart",
+    "Nisan",
+    "Mayıs",
+    "Haziran",
+    "Temmuz",
+    "Ağustos",
+    "Eylül",
+    "Ekim",
+    "Kasım",
+    "Aralık"
+  ],
+  "daysOfWeek": [
+    "Pazar",
+    "Pazartesi",
+    "Salı",
+    "Çarşamba",
+    "Perşembe",
+    "Cuma",
+    "Cumartesi"
+  ],
+  "phrases": {
+    "everySecond": "Her saniye",
+    "everyMinute": "Her dakika",
+    "everyHour": "Her saat",
+    "everyDay": "Her gün",
+    "everyMonth": "Her ay",
+    "everyYear": "Her yıl",
+    "everyNSeconds": "Her {step} saniyede bir",
+    "everyNMinutes": "Her {step} dakikada bir",
+    "everyNHours": "Her {step} saatte bir",
+    "atMinute": "{minute}. dakikada",
+    "atTime": "saat {time}",
+    "betweenHours": "{start} - {end} saatleri arasında",
+    "onDaysOfWeek": "{days}",
+    "onDaysOfMonth": "ayın {days}. gününde",
+    "inMonths": "{months}",
+    "inYears": "{years} yıllarında",
+    "lastDayOfMonth": "ayın son gününde",
+    "lastWeekdayOfMonth": "ayın son iş gününde",
+    "daysBeforeEndOfMonth": "ayın bitiminden {offset} gün önce",
+    "nearestWeekday": "ayın {day}. gününe en yakın iş gününde",
+    "lastWeekdayOccurrence": "ayın son {dayOfWeek} gününde",
+    "nthWeekdayOccurrence": "ayın {ordinal} {dayOfWeek} gününde",
+    "rebootDescription": "Yalnızca sistem yeniden başlatıldığında çalışır (zamanlanmış çalışma zamanı yok)",
+    "separator": ", ",
+    "and": " ve ",
+    "through": " ile {end} arasında"
+  }
+}
