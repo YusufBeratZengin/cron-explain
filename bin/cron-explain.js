@@ -25,7 +25,7 @@ Arguments:
   <expression>          Cron expression (5, 6, 7 fields or alias like @daily, @hourly, @reboot)
 
 Options:
-  --next <n>            Number of next run times to calculate (default: 5)
+  --next <n>            Number of next run times to calculate (0-1000, default: 5)
   --tz <timeZone>       IANA time zone (default: system time zone or UTC)
   --lang <en|tr>        Output language for explanations (default: en)
   --start <isoDate>     Reference start date/time (default: now)
@@ -57,15 +57,19 @@ function parseCliArgs(args) {
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    const valueOptions = ['--next', '--tz', '--timezone', '--lang', '--start', '--dst', '--format'];
+    if (valueOptions.includes(arg) && (args[i + 1] === undefined || args[i + 1].startsWith('--'))) {
+      throw new Error(`Missing value for ${arg}.`);
+    }
 
     if (arg === '-h' || arg === '--help') {
       options.help = true;
     } else if (arg === '-v' || arg === '--version') {
       options.version = true;
     } else if (arg === '--next') {
-      options.next = parseInt(args[++i], 10);
+      options.next = args[++i];
     } else if (arg.startsWith('--next=')) {
-      options.next = parseInt(arg.slice(7), 10);
+      options.next = arg.slice(7);
     } else if (arg === '--tz' || arg === '--timezone') {
       options.tz = args[++i];
     } else if (arg.startsWith('--tz=')) {
@@ -89,8 +93,7 @@ function parseCliArgs(args) {
     } else if (!arg.startsWith('-')) {
       options.expressionParts.push(arg);
     } else {
-      console.error(`Unknown option: ${arg}`);
-      process.exit(1);
+      throw new Error(`Unknown option: ${arg}`);
     }
   }
 
@@ -111,6 +114,17 @@ async function main() {
     process.exit(0);
   }
 
+  if (!/^\d+$/.test(String(options.next)) || !Number.isSafeInteger(Number(options.next)) || Number(options.next) > 1000) {
+    throw new Error('--next must be an integer between 0 and 1000.');
+  }
+  options.next = Number(options.next);
+  if (!['en', 'tr'].includes(options.lang)) throw new Error('--lang must be en or tr.');
+  if (!['shift', 'skip'].includes(options.dst)) throw new Error('--dst must be shift or skip.');
+  if (!['text', 'json'].includes(options.format)) throw new Error('--format must be text or json.');
+  if (options.start !== null && !Number.isFinite(new Date(options.start).getTime())) {
+    throw new Error('--start must be a valid date.');
+  }
+
   if (options.expressionParts.length === 0) {
     console.error('Error: No cron expression provided.\n');
     printHelp();
@@ -118,7 +132,7 @@ async function main() {
   }
 
   const rawExpression = options.expressionParts.join(' ').trim();
-  const lang = (options.lang || 'en').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  const lang = options.lang;
 
   let tz = options.tz;
   if (!tz) {
@@ -149,19 +163,24 @@ async function main() {
   const explanation = explainCron(parsed, { lang });
 
   let nextRuns = [];
-  if (!parsed.isReboot && options.next > 0) {
+  let neverMatches = false;
+  if (!parsed.isReboot) {
     try {
       nextRuns = getNextRunTimes(parsed, {
-        count: options.next,
+        count: Math.max(1, options.next),
         timeZone: tz,
         startDate: options.start ? new Date(options.start) : new Date(),
         dstPolicy: options.dst,
       });
+      neverMatches = nextRuns.length === 0;
+      if (options.next === 0) nextRuns = [];
     } catch (err) {
       console.error(`Calculation error: ${err.message}`);
       process.exit(1);
     }
   }
+
+  if (neverMatches) console.error('Warning: This expression never matches any date');
 
   if (options.format === 'json') {
     const jsonOutput = {
@@ -169,6 +188,7 @@ async function main() {
       explanation,
       timeZone: tz,
       isReboot: parsed.isReboot,
+      neverMatches,
       nextRuns: nextRuns.map((d) => ({
         utc: d.toISOString(),
         formatted: formatZonedDate(d, tz),
@@ -209,6 +229,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(`Error: ${err.message}`);
   process.exit(1);
 });

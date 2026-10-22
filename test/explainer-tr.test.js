@@ -16,8 +16,19 @@ describe('Turkish Explainer', () => {
   test('explains compound expression with hours and day range', () => {
     assert.equal(
       explainCron('*/15 9-17 * * 1-5', { lang: 'tr' }),
-      'Pazartesi ile Cuma arasında, 09:00 - 17:59 saatleri arasında her 15 dakikada bir'
+      'Hafta içi her gün 09:00 ile 17:59 arasında her 15 dakikada bir'
     );
+  });
+
+  test('uses weekday shorthand only for exactly Monday through Friday', () => {
+    assert.equal(explainCron('*/15 9-17 * * MON,TUE,WED,THU,FRI', { lang: 'tr' }),
+      'Hafta içi her gün 09:00 ile 17:59 arasında her 15 dakikada bir');
+    assert.equal(explainCron('*/15 9-17 * * 1-4', { lang: 'tr' }),
+      'Pazartesi ile Perşembe arasında, 09:00 ile 17:59 arasında her 15 dakikada bir');
+    assert.equal(explainCron('0 0 * * mon-fri,sun', { lang: 'tr' }),
+      "Cumartesi hariç her gün, saat 00:00'da");
+    assert.equal(explainCron('0 0 0 ? * 1-6', { lang: 'tr' }),
+      "Cumartesi hariç her gün, saat 00:00'da");
   });
 
   test('explains exact time of day with proper Turkish locative case', () => {

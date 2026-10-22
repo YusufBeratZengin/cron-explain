@@ -1,0 +1,64 @@
+name: Bug report
+description: Report an incorrect explanation, schedule, or CLI error
+labels: [bug]
+body:
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Existing issues
+      options:
+        - label: I searched existing issues
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: cron-explain version
+      description: Output of cron-explain --version
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      description: Output of node --version
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: input
+    id: expression
+    attributes:
+      label: Cron expression
+    validations:
+      required: true
+  - type: input
+    id: flags
+    attributes:
+      label: CLI flags or API options
+      description: Include time zone, start date, language, count, and DST policy
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Share a minimal command or script with synthetic data
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior and logs
+      description: Remove personal data and secrets before posting
+    validations:
+      required: true

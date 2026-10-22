@@ -4,6 +4,32 @@ import { getNextRunTimes } from '../src/schedule.js';
 import { formatZonedDate } from '../src/timezones.js';
 
 describe('DST Edge Cases', () => {
+  test('skip policy omits the 2027 New York spring gap', () => {
+    const runs = getNextRunTimes('30 2 * * *', {
+      startDate: '2027-03-13T12:00:00Z', timeZone: 'America/New_York', dstPolicy: 'skip', count: 2,
+    });
+    assert.deepEqual(runs.map((date) => date.toISOString()), [
+      '2027-03-15T06:30:00.000Z', '2027-03-16T06:30:00.000Z',
+    ]);
+  });
+
+  test('skip policy runs 02:30 once after the 2026 New York fall transition', () => {
+    const runs = getNextRunTimes('30 2 * * *', {
+      startDate: '2026-10-31T12:00:00Z', timeZone: 'America/New_York', dstPolicy: 'skip', count: 2,
+    });
+    assert.deepEqual(runs.map((date) => date.toISOString()), [
+      '2026-11-01T07:30:00.000Z', '2026-11-02T07:30:00.000Z',
+    ]);
+  });
+
+  test('skip policy chooses the first 01:30 in the actual fall overlap', () => {
+    const runs = getNextRunTimes('30 1 * * *', {
+      startDate: '2026-10-31T12:00:00Z', timeZone: 'America/New_York', dstPolicy: 'skip', count: 2,
+    });
+    assert.deepEqual(runs.map((date) => date.toISOString()), [
+      '2026-11-01T05:30:00.000Z', '2026-11-02T06:30:00.000Z',
+    ]);
+  });
   test('Spring Forward (Gap) in America/New_York shifts to boundary by default', () => {
     // Clocks jump from 02:00 EST to 03:00 EDT on 2026-03-08
     const runs = getNextRunTimes('30 2 * * *', {

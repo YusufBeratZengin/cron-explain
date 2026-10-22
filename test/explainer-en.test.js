@@ -16,8 +16,16 @@ describe('English Explainer', () => {
   test('explains compound expression with hours and day range', () => {
     assert.equal(
       explainCron('*/15 9-17 * * 1-5'),
-      'Every 15 minutes, between 09:00 and 17:59, Monday through Friday'
+      'Every 15 minutes, between 09:00 and 17:59, on Monday through Friday'
     );
+  });
+
+  test('uses on for named days and concise single-day complements', () => {
+    assert.equal(explainCron('0 0 * * mon-fri,sun'), 'At 00:00, every day except Saturday');
+    assert.equal(explainCron('0 0 * * mon'), 'At 00:00, on Monday');
+    assert.equal(explainCron('0 0 * * mon,wed,fri'), 'At 00:00, on Monday, Wednesday, and Friday');
+    assert.equal(explainCron('0 0 * * 0-5,7'), 'At 00:00, every day except Saturday');
+    assert.equal(explainCron('0 0 0 ? * 1-6'), 'At 00:00, every day except Saturday');
   });
 
   test('explains exact time of day', () => {

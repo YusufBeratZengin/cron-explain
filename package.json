@@ -9,11 +9,19 @@
   "main": "./src/index.js",
   "exports": {
     ".": "./src/index.js",
+    "./package.json": "./package.json",
     "./locales/*": "./locales/*"
   },
   "scripts": {
     "test": "node --test",
-    "lint": "node scripts/check-syntax.js"
+    "lint": "node scripts/check-syntax.js && node scripts/check-readme.js",
+    "prepublishOnly": "npm run lint && npm test"
+  },
+  "files": ["bin", "src", "locales", "README.md", "README.tr.md", "CHANGELOG.md", "LICENSE", "SECURITY.md"],
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "engines": {
     "node": ">=20.0.0"
@@ -36,10 +44,9 @@
     "timezone",
     "dst",
     "turkish",
-    "english",
-    "zero-dependencies"
+    "english"
   ],
-  "author": "Yusuf Berat Zengin <118852217+YusufBeratZengin@users.noreply.github.com>",
+  "author": "Yusuf Berat Zengin",
   "license": "MIT",
   "dependencies": {}
 }

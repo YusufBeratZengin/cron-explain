@@ -1,102 +1,84 @@
 # cron-explain
+[![CI](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/npm/v/cron-explain)](https://www.npmjs.com/package/cron-explain) ![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-green.svg) ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-blue.svg)
+English | [Türkçe](README.tr.md)
 
-Parse, validate, and explain cron expressions in plain English and Turkish, with next run time calculation and time zone support. Built for Node.js >=20 with ECMAScript modules (ESM) and zero runtime dependencies.
+Parse, validate, and explain cron expressions in English or Turkish, and list future runs in an IANA time zone.
+Runs offline on Node.js >=20 with ESM and zero dependencies.
+Install: `npm install cron-explain` (CLI: `npm install --global cron-explain`).
 
-## Features
+## Demo
 
-- Supports 5-field (Unix standard), 6-field (with seconds or year), and 7-field (full Quartz syntax) cron expressions.
-- Supports Quartz special characters: `?`, `L`, `LW`, `L-<offset>`, `<day>W`, `<day>L`, and `<day>#<nth>`.
-- Supports standard aliases (`@yearly`, `@annually`, `@monthly`, `@weekly`, `@daily`, `@midnight`, `@hourly`, `@reboot`).
-- Natural language explanations in English and Turkish loaded from locale files (`locales/en.json`, `locales/tr.json`).
-- Turkish grammatical correctness: proper consonant assimilation and vowel harmony for ordinal (`1'inci`, `2'nci`, `6'ncı`) and locative case suffixes (`saat 14:00'te`, `09:30'da`, `Ocak'ta`, `Eylül'de`).
-- Next N run times calculated using standard ECMAScript `Intl` time zones without external timezone databases.
-- Predictable Daylight Saving Time (DST) policy for spring-forward gaps and fall-back overlaps.
-- Leap year awareness (e.g. `0 0 29 2 *` only schedules on February 29 in leap years).
-- Descriptive validation errors with exact ASCII position markers and character pointers.
-- Unified programmatic API and command-line interface (`cron-explain`).
-- Zero runtime dependencies.
+<!-- check-readme -->
+```console
+$ cron-explain "*/15 9-17 * * 1-5" --next 2 --tz UTC --lang en --start 2026-10-22T08:00:00Z
+Expression: */15 9-17 * * 1-5
+Explanation: Every 15 minutes, between 09:00 and 17:59, on Monday through Friday
+Time Zone: UTC
 
-## Installation
-
-```bash
-npm install cron-explain
+Next 2 run times:
+1. 2026-10-22 09:00:00 (+00:00)
+2. 2026-10-22 09:15:00 (+00:00)
 ```
 
-Or run directly via `npx`:
+The start date is fixed so you can reproduce the output. Use `--lang tr` for Turkish:
 
-```bash
-npx cron-explain "*/15 9-17 * * 1-5" --next 5 --tz Europe/Istanbul --lang tr
-```
-
-## CLI Usage
-
-The package provides a binary named `cron-explain`.
-
-```
-Usage:
-  cron-explain "<expression>" [options]
-
-Arguments:
-  <expression>          Cron expression (5, 6, 7 fields or alias)
-
-Options:
-  --next <n>            Number of next run times to calculate (default: 5)
-  --tz <timeZone>       IANA time zone (default: system time zone or UTC)
-  --lang <en|tr>        Output language for explanations (default: en)
-  --start <isoDate>     Reference start date/time (default: now)
-  --dst <shift|skip>    DST spring-forward gap handling (default: shift)
-  --format <text|json>  Output format (default: text)
-  -v, --version         Show version number
-  -h, --help            Show help message
-```
-
-### Examples
-
-#### Turkish Output with Next Run Times
-```bash
-cron-explain "*/15 9-17 * * 1-5" --next 5 --tz Europe/Istanbul --lang tr
-```
-Output:
-```
+<!-- check-readme -->
+```console
+$ cron-explain "*/15 9-17 * * 1-5" --next 2 --tz UTC --lang tr --start 2026-10-22T08:00:00Z
 İfade: */15 9-17 * * 1-5
-Açıklama: Pazartesi ile Cuma arasında, 09:00 - 17:59 saatleri arasında her 15 dakikada bir
-Zaman Dilimi: Europe/Istanbul
+Açıklama: Hafta içi her gün 09:00 ile 17:59 arasında her 15 dakikada bir
+Zaman Dilimi: UTC
 
-Sonraki 5 Çalışma Zamanı:
-1. 2026-10-23 09:00:00 (+03:00)
-2. 2026-10-23 09:15:00 (+03:00)
-3. 2026-10-23 09:30:00 (+03:00)
-4. 2026-10-23 09:45:00 (+03:00)
-5. 2026-10-23 10:00:00 (+03:00)
+Sonraki 2 Çalışma Zamanı:
+1. 2026-10-22 09:00:00 (+00:00)
+2. 2026-10-22 09:15:00 (+00:00)
 ```
 
-#### English Output
-```bash
-cron-explain "0 12 1 * *" --next 3 --tz America/New_York --lang en
-```
-Output:
-```
-Expression: 0 12 1 * *
-Explanation: At 12:00, on day 1 of the month
-Time Zone: America/New_York
+## Install
 
-Next 3 run times:
-1. 2026-11-01 12:00:00 (-05:00)
-2. 2026-12-01 12:00:00 (-05:00)
-3. 2027-01-01 12:00:00 (-05:00)
+Use the install command above for the library, or the global install for the CLI.
+To try the checkout without installing, replace `cron-explain` with `node bin/cron-explain.js` in the examples.
+
+## Usage
+
+Supports 5 fields (minute, hour, day of month, month, day of week), 6 fields
+(with seconds, or a trailing four-digit year/range), and 7 fields (seconds through year).
+Quartz syntax includes `?`, `L`, `LW`, `L-n`, `nW`, `dL`, and `d#n`.
+Aliases: `@yearly`, `@annually`, `@monthly`, `@weekly`, `@daily`, `@midnight`, `@hourly`, `@reboot`.
+
+### Library API
+
+```js
+import { validateCron, parseCron, explainCron, getNextRunTimes, formatZonedDate } from 'cron-explain';
+
+const expression = '*/15 9-17 * * 1-5';
+const validation = validateCron(expression);
+const parsed = parseCron(expression);
+const explanation = explainCron(parsed, { lang: 'tr' });
+const runs = getNextRunTimes(parsed, {
+  startDate: '2026-10-22T08:00:00Z',
+  timeZone: 'Europe/Istanbul',
+  count: 2,
+  dstPolicy: 'skip',
+});
+const formatted = runs.map((date) => formatZonedDate(date, 'Europe/Istanbul'));
 ```
 
-#### JSON Output
-```bash
-cron-explain "0 0 1 1 *" --format json
-```
-Output:
-```json
+`getNextRunTimes` returns `Date[]`; the start is exclusive. `parseCron` throws
+`CronValidationError` for invalid input; `validateCron` returns a validation result.
+Time zone utilities and Turkish grammar helpers are also exported; see [src/index.js](src/index.js).
+
+### JSON output
+
+<!-- check-readme -->
+```console
+$ cron-explain "0 0 1 1 *" --next 1 --tz UTC --lang en --format json --start 2026-10-22T00:00:00Z
 {
   "expression": "0 0 1 1 *",
   "explanation": "At 00:00, on day 1 of the month, in January",
   "timeZone": "UTC",
   "isReboot": false,
+  "neverMatches": false,
   "nextRuns": [
     {
       "utc": "2027-01-01T00:00:00.000Z",
@@ -106,99 +88,149 @@ Output:
 }
 ```
 
-#### Position Marker on Validation Error
-```bash
-cron-explain "*/15 25 * * *"
-```
-Output:
-```
-Invalid cron expression:
-  */15 25 * * *
-       ^^
-Hour '25' is out of range (0-23).
-```
+## Examples
 
-## Programmatic API
+[examples/basic.mjs](examples/basic.mjs) validates, explains, and calculates future runs:
 
-```javascript
-import {
-  parseCron,
-  validateCron,
-  explainCron,
-  getNextRunTimes,
-  formatZonedDate,
-} from 'cron-explain';
-
-// 1. Validation
-const validation = validateCron('*/15 9-17 * * 1-5');
-if (!validation.valid) {
-  console.error(validation.visualMarker);
-}
-
-// 2. Explanation
-const explanationEn = explainCron('*/15 9-17 * * 1-5', { lang: 'en' });
-// "Every 15 minutes, between 09:00 and 17:59, Monday through Friday"
-
-const explanationTr = explainCron('*/15 9-17 * * 1-5', { lang: 'tr' });
-// "Pazartesi ile Cuma arasında, 09:00 - 17:59 saatleri arasında her 15 dakikada bir"
-
-// 3. Next Run Times
-const runs = getNextRunTimes('*/15 9-17 * * 1-5', {
-  count: 5,
-  timeZone: 'Europe/Istanbul',
-  startDate: new Date('2026-10-22T08:00:00Z'),
-});
-
-for (const date of runs) {
-  console.log(formatZonedDate(date, 'Europe/Istanbul'));
-}
+<!-- check-readme -->
+```console
+$ node examples/basic.mjs
+Valid: true
+Every 15 minutes, between 09:00 and 17:59, on Monday through Friday
+Hafta içi her gün 09:00 ile 17:59 arasında her 15 dakikada bir
+2026-10-22T09:00:00.000Z
+2026-10-22T09:15:00.000Z
 ```
 
-## Daylight Saving Time (DST) Policy
+[examples/quartz.mjs](examples/quartz.mjs) demonstrates the three special schedules below:
 
-Daylight Saving Time transitions can create wall-clock ambiguities. `cron-explain` implements a deterministic policy without external timezone libraries:
+<!-- check-readme -->
+```console
+$ node examples/quartz.mjs
+0 0 12 ? * 2#3: At 12:00, on the 3rd Monday of the month
+2026-11-16T12:00:00.000Z
+0 0 L * ?: At 00:00, on the last day of the month
+2026-10-31T00:00:00.000Z
+0 15 10 ? * 6L: At 10:15, on the last Friday of the month
+2026-10-30T10:15:00.000Z
+```
 
-1. **Spring Forward (Gap)**:
-   When clocks jump forward (e.g. from 02:00:00 directly to 03:00:00 in North America), local times between 02:00:00 and 02:59:59 do not exist on the clock.
-   - `dstPolicy: 'shift'` (default): Shifts execution to the start of the next valid local hour (03:00:00 local time). This guarantees that daily scheduled jobs (e.g. database backups or report generators) are not missed.
-   - `dstPolicy: 'skip'`: Skips the missing wall-clock iteration and advances to the next scheduled interval.
+### Quartz examples
 
-2. **Fall Back (Overlap)**:
-   When clocks fall back (e.g. from 02:00:00 back to 01:00:00), the local hour between 01:00:00 and 01:59:59 occurs twice.
-   - `cron-explain` executes once on the first occurrence (Daylight Time) and suppresses duplicate execution during the repeated hour in Standard Time.
+Quartz uses 1=Sunday through 7=Saturday. A fifth occurrence skips months that do not have one.
 
-## Quartz Special Syntax Support
+<!-- check-readme -->
+```console
+$ cron-explain "0 0 12 ? * 2#3" --next 2 --tz UTC --lang en --start 2026-10-22T00:00:00Z
+Expression: 0 0 12 ? * 2#3
+Explanation: At 12:00, on the 3rd Monday of the month
+Time Zone: UTC
 
-| Syntax | Field | Description | Example |
-| :--- | :--- | :--- | :--- |
-| `?` | DOM, DOW | No specific value (disregards field) | `0 0 12 ? * WED` |
-| `L` | DOM | Last day of the month | `0 0 L * ?` |
-| `LW` | DOM | Last weekday (Mon-Fri) of the month | `0 0 LW * ?` |
-| `L-<n>` | DOM | `n` days before the end of the month | `0 0 L-3 * ?` |
-| `<n>W` | DOM | Nearest weekday to day `n` | `0 0 15W * ?` |
-| `<d>L` | DOW | Last day of week `d` in the month | `0 0 ? * 6L` (last Friday) |
-| `<d>#<k>` | DOW | `k`-th occurrence of day `d` in the month | `0 0 ? * 2#3` (3rd Monday) |
+Next 2 run times:
+1. 2026-11-16 12:00:00 (+00:00)
+2. 2026-12-21 12:00:00 (+00:00)
+```
 
-## Turkish Grammar Helpers
+<!-- check-readme -->
+```console
+$ cron-explain "0 0 L * ?" --next 2 --tz UTC --lang en --start 2026-10-22T00:00:00Z
+Expression: 0 0 L * ?
+Explanation: At 00:00, on the last day of the month
+Time Zone: UTC
 
-The Turkish explanation engine relies on standalone phonetic helper functions exported from the package:
+Next 2 run times:
+1. 2026-10-31 00:00:00 (+00:00)
+2. 2026-11-30 00:00:00 (+00:00)
+```
 
-- `turkishOrdinal(n, style)`: Formats numbers with correct vowel harmony and consonant stems (`1'inci`, `2'nci`, `3'üncü`, `4'üncü`, `6'ncı`, `20'nci`, `40'ıncı`, etc.) or dot style (`1.`, `2.`).
-- `turkishLocative(wordOrTime)`: Generates locative case suffixes (`-de`, `-da`, `-te`, `-ta`) according to vowel harmony and consonant assimilation rules (Fıstıkçı Şahap). Handles clock hours (`14:00'te`, `09:30'da`, `00:00'da`), months (`Ocak'ta`, `Eylül'de`), and generic words.
-- `turkishStepSuffix(unit)`: Produces idiomatic interval phrases (`dakikada bir`, `saatte bir`, `günde bir`).
+<!-- check-readme -->
+```console
+$ cron-explain "0 15 10 ? * 6L" --next 2 --tz UTC --lang en --start 2026-10-22T00:00:00Z
+Expression: 0 15 10 ? * 6L
+Explanation: At 10:15, on the last Friday of the month
+Time Zone: UTC
+
+Next 2 run times:
+1. 2026-10-30 10:15:00 (+00:00)
+2. 2026-11-27 10:15:00 (+00:00)
+```
+
+## Configuration
+
+| Option | Meaning | Default |
+| --- | --- | --- |
+| `--next <n>` | Integer from 0 to 1000; larger counts are rejected | 5 |
+| `--tz <zone>`, `--timezone <zone>` | IANA time zone | System zone or UTC |
+| `--lang <en\|tr>` | Explanation language | en |
+| `--start <date>` | Reference date; use ISO 8601 with an offset | Now |
+| `--dst <shift\|skip>` | Spring gap policy | shift |
+| `--format <text\|json>` | Output format | text |
+| `-h`, `--help` | Help | |
+| `-v`, `--version` | Version | |
+
+### Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| 0 | Valid expression, including expressions with no future matching date |
+| 1 | Invalid expression or CLI usage error |
+
+Expressions such as `0 0 31 2 *`, `0 0 30 2 *`, `0 0 31 4,6,9,11 *`,
+and a past Quartz year (`0 0 0 1 1 ? 2020`) produce
+`Warning: This expression never matches any date` on stderr, an empty run list,
+and `"neverMatches": true` in JSON. Exit code stays **0**.
+Here “never matches” means no future date after `--start` through the supported
+year 2099; it does not claim that a past-year schedule never ran.
+The check still runs with `--next 0`. `@reboot` has no scheduled dates and is
+not marked as never matching. JSON always includes the boolean `neverMatches`.
+
+## How it works
+
+The parser expands field values and validates ranges. The scheduler iterates years,
+months, matching days, and allowed times, rather than scanning every minute.
+Distant years and leap days use the same path.
+English weekday phrases use “on”; six-day sets use “every day except Saturday”
+(or the corresponding missing day). Turkish uses “Hafta içi her gün” for exactly Monday–Friday.
+
+For Unix expressions with both day of month and day of week restricted, either
+matching field is sufficient (OR). Quartz `?` leaves that field unspecified.
+
+### DST policy
+
+Rules come from Node's `Intl` data. For a missing local time during spring-forward,
+`shift` moves the run to the next valid hour boundary; `skip` omits it.
+During fall-back, an ambiguous local time runs once at its first occurrence under
+either policy. In New York, the repeated hour is 01:00–01:59; 02:30 occurs once after the change.
+
+## Limitations and privacy
+
+Explicit years are 1970–2099; future searches stop at 2099 and can return fewer
+dates than requested. `@reboot` can be explained but has no next dates.
+This package calculates schedules; it does not execute jobs.
+Processing is local and makes no network calls. Time zone accuracy depends on
+the time zone data bundled with your Node.js runtime.
 
 ## Development
 
-Run tests:
+In a local checkout, run:
+
 ```bash
+npm ci
+npm run lint
 npm test
+npm pack --dry-run
 ```
 
-Run syntax validation:
-```bash
-npm run lint
-```
+Lint checks JavaScript syntax/style and executes the marked README examples with
+fixed starts, comparing stdout and exit status. CI runs the checks and both offline
+examples on Windows and Linux with Node 20, 22, and 24.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, commit style, and trusted
+publishing setup. Follow the [Code of Conduct](CODE_OF_CONDUCT.md).
+Report vulnerabilities using [SECURITY.md](SECURITY.md).
 
 ## License
 
-MIT - Copyright (c) 2026 Yusuf Berat Zengin. See [LICENSE](https://github.com/YusufBeratZengin/cron-explain/blob/main/LICENSE) for details.
+[MIT](LICENSE) — Copyright (c) 2026 Yusuf Berat Zengin.

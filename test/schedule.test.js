@@ -2,6 +2,36 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { getNextRunTimes } from '../src/schedule.js';
 import { formatZonedDate } from '../src/timezones.js';
+import { performance } from 'node:perf_hooks';
+
+for (const [expression, expected] of [
+  ['0 0 12 ? * 2#3', ['2026-11-16T12:00:00.000Z', '2026-12-21T12:00:00.000Z']],
+  ['0 12 ? * 2#3', ['2026-11-16T12:00:00.000Z', '2026-12-21T12:00:00.000Z']],
+  ['0 15 10 ? * 6L', ['2026-10-30T10:15:00.000Z', '2026-11-27T10:15:00.000Z']],
+  ['0 0 12 ? * 1#1', ['2026-11-01T12:00:00.000Z', '2026-12-06T12:00:00.000Z']],
+  ['0 0 12 ? * 7#5', ['2026-10-31T12:00:00.000Z', '2027-01-30T12:00:00.000Z']],
+]) {
+  test(`Quartz occurrences: ${expression}`, () => {
+    const runs = getNextRunTimes(expression, {
+      startDate: '2026-10-22T00:00:00Z', timeZone: 'UTC', count: 2,
+    });
+    assert.deepEqual(runs.map((date) => date.toISOString()), expected);
+  });
+}
+
+for (const [expression, expected] of [
+  ['0 0 29 2 *', '2028-02-29T00:00:00.000Z'],
+  ['0 0 0 1 1 ? 2099', '2099-01-01T00:00:00.000Z'],
+]) {
+  test(`sparse schedule jumps through calendar fields: ${expression}`, () => {
+    const start = performance.now();
+    const runs = getNextRunTimes(expression, {
+      startDate: '2026-10-22T00:00:00Z', timeZone: 'UTC', count: 1,
+    });
+    assert.deepEqual(runs.map((date) => date.toISOString()), [expected]);
+    assert.ok(performance.now() - start < 2000, 'sparse lookup must finish within 2 seconds');
+  });
+}
 
 describe('Schedule Engine', () => {
   test('calculates next 5 runs for standard 15-minute weekday schedule', () => {

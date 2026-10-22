@@ -38,7 +38,7 @@ describe('CLI Execution', () => {
 
     assert.equal(stderr, '');
     assert.match(stdout, /İfade: \*\/\d+ 9-17 \* \* 1-5/);
-    assert.match(stdout, /Açıklama: Pazartesi ile Cuma arasında/);
+    assert.match(stdout, /Açıklama: Hafta içi her gün/);
     assert.match(stdout, /Zaman Dilimi: Europe\/Istanbul/);
     assert.match(stdout, /Sonraki 3 Çalışma Zamanı:/);
   });
@@ -59,6 +59,7 @@ describe('CLI Execution', () => {
     const data = JSON.parse(stdout);
     assert.equal(data.expression, '0 0 1 1 *');
     assert.equal(data.timeZone, 'UTC');
+    assert.equal(data.neverMatches, false);
     assert.equal(data.nextRuns.length, 2);
   });
 
@@ -87,3 +88,88 @@ describe('CLI Execution', () => {
     }
   });
 });
+
+test('CLI lists the third Monday without a calculation error', async () => {
+  const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+    '0 0 12 ? * 2#3', '--next', '2', '--tz', 'UTC', '--start', '2026-10-22T00:00:00Z',
+  ]);
+  assert.equal(stderr, '');
+  assert.match(stdout, /Next 2 run times:/);
+  assert.match(stdout, /1\. 2026-11-16 12:00:00/);
+  assert.match(stdout, /2\. 2026-12-21 12:00:00/);
+});
+
+for (const expression of ['0 0 31 2 *', '0 0 30 2 *', '0 0 31 4,6,9,11 *', '0 0 0 1 1 ? 2020']) {
+  for (const format of ['text', 'json']) {
+    test(`never-matching ${expression} (${format}) warns and exits 0`, async () => {
+      const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, expression,
+        '--start', '2026-10-22T00:00:00Z', '--tz', 'UTC', '--format', format,
+      ]);
+      assert.equal(stderr.trim(), 'Warning: This expression never matches any date');
+      if (format === 'json') {
+        const data = JSON.parse(stdout);
+        assert.equal(data.neverMatches, true);
+        assert.deepEqual(data.nextRuns, []);
+      } else {
+        assert.match(stdout, /Next 0 run times:/);
+      }
+    });
+  }
+}
+
+for (const [args, message] of [
+  [['--nxt', '3'], 'Error: Unknown option: --nxt'],
+  [['--next', 'abc'], 'Error: --next must be an integer between 0 and 1000.'],
+  [['--next', '-1'], 'Error: --next must be an integer between 0 and 1000.'],
+  [['--next', '100000'], 'Error: --next must be an integer between 0 and 1000.'],
+  [['--next=3oops'], 'Error: --next must be an integer between 0 and 1000.'],
+  [['--start', 'not-a-date'], 'Error: --start must be a valid date.'],
+  [['--lang', 'xx'], 'Error: --lang must be en or tr.'],
+  [['--next'], 'Error: Missing value for --next.'],
+  [['--tz'], 'Error: Missing value for --tz.'],
+  [['--dst', 'invalid'], 'Error: --dst must be shift or skip.'],
+  [['--format', 'xml'], 'Error: --format must be text or json.'],
+]) {
+  test(`CLI rejects ${args.join(' ')} with one English error line`, async () => {
+    await assert.rejects(execFileAsync(process.execPath, [binPath, '* * * * *', ...args]), (err) => {
+      assert.equal(err.code, 1);
+      assert.equal(err.stdout, '');
+      assert.equal(err.stderr.trim(), message);
+      assert.equal(err.stderr.trim().split(/\r?\n/).length, 1);
+      return true;
+    });
+  });
+}
+
+for (const [expression, count, neverMatches] of [
+  ['0 0 31 2 *', '0', true],
+  ['0 0 * * *', '0', false],
+  ['0 0 31 2 MON', '2', false], // Unix OR permits Mondays in February.
+  ['0 0 0 1 1 ? 2099', '2', false],
+  ['@reboot', '2', false],
+]) {
+  test(`neverMatches distinguishes ${expression} with --next ${count}`, async () => {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, expression,
+      '--next', count, '--format', 'json', '--tz', 'UTC', '--start', '2026-10-22T00:00:00Z',
+    ]);
+    const data = JSON.parse(stdout);
+    assert.equal(data.neverMatches, neverMatches);
+    assert.equal(stderr.trim(), neverMatches ? 'Warning: This expression never matches any date' : '');
+    if (count === '0' || expression === '@reboot') assert.deepEqual(data.nextRuns, []);
+    else assert.ok(data.nextRuns.length > 0);
+  });
+}
+
+for (const [expression, start, expected] of [
+  ['30 2 * * *', '2027-03-13T12:00:00Z', ['2027-03-15T06:30:00.000Z', '2027-03-16T06:30:00.000Z']],
+  ['30 2 * * *', '2026-10-31T12:00:00Z', ['2026-11-01T07:30:00.000Z', '2026-11-02T07:30:00.000Z']],
+  ['30 1 * * *', '2026-10-31T12:00:00Z', ['2026-11-01T05:30:00.000Z', '2026-11-02T06:30:00.000Z']],
+]) {
+  test(`CLI --dst skip: ${expression} from ${start}`, async () => {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath, expression,
+      '--dst', 'skip', '--start', start, '--tz', 'America/New_York', '--next', '2', '--format', 'json',
+    ]);
+    assert.equal(stderr, '');
+    assert.deepEqual(JSON.parse(stdout).nextRuns.map((run) => run.utc), expected);
+  });
+}

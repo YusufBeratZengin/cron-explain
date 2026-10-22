@@ -248,6 +248,9 @@ function formatMonthPartEn(month, locale) {
 function formatDowPartEn(dow, locale, cronType) {
   if (dow.isWildcard || dow.isQuestion) return '';
 
+  const excluded = excludedDayName(dow, locale, cronType);
+  if (excluded) return locale.phrases.everyDayExcept.replace('{day}', excluded);
+
   const item = dow.items[0];
   if (dow.items.length === 1) {
     if (item.type === 'lastWeekdayOccurrence') {
@@ -262,7 +265,7 @@ function formatDowPartEn(dow, locale, cronType) {
     if (item.type === 'range') {
       const start = getDowName(item.min, locale, cronType);
       const end = getDowName(item.max, locale, cronType);
-      return `${start} through ${end}`;
+      return locale.phrases.onDaysOfWeek.replace('{days}', `${start} through ${end}`);
     }
   }
 
@@ -270,7 +273,7 @@ function formatDowPartEn(dow, locale, cronType) {
     const names = dow.values.map((d) => getDowName(d, locale, cronType));
     // Remove duplicates if Unix 0 and 7 are both present
     const unique = Array.from(new Set(names));
-    return formatListEn(unique);
+    return locale.phrases.onDaysOfWeek.replace('{days}', formatListEn(unique));
   }
 
   return `on ${dow.raw}`;
@@ -368,6 +371,9 @@ function explainTr(parsed, locale) {
 
   const prefix = dateParts.join(', ');
   if (timeDesc) {
+    if (dateParts.length === 1 && dowDesc === locale.phrases.weekdays) {
+      return `${prefix} ${timeDesc}`;
+    }
     return `${prefix}, ${timeDesc}`;
   }
   return prefix;
@@ -441,7 +447,7 @@ function formatHourRangeTr(hr) {
   if (hr.items.length === 1 && hr.items[0].type === 'range') {
     const start = String(hr.items[0].min).padStart(2, '0') + ':00';
     const end = String(hr.items[0].max).padStart(2, '0') + ':59';
-    return `${start} - ${end} saatleri arasında`;
+    return `${start} ile ${end} arasında`;
   }
   if (hr.items.length === 1 && hr.items[0].type === 'step') {
     return `her ${hr.items[0].step} saatte bir`;
@@ -505,6 +511,15 @@ function formatMonthPartTr(month, locale) {
 function formatDowPartTr(dow, locale, cronType) {
   if (dow.isWildcard || dow.isQuestion) return '';
 
+  const excluded = excludedDayName(dow, locale, cronType);
+  if (excluded) return locale.phrases.everyDayExcept.replace('{day}', excluded);
+  if (dow.values) {
+    const names = new Set(dow.values.map((day) => getDowName(day, locale, cronType)));
+    if (names.size === 5 && locale.daysOfWeek.slice(1, 6).every((day) => names.has(day))) {
+      return locale.phrases.weekdays;
+    }
+  }
+
   const item = dow.items[0];
   if (dow.items.length === 1) {
     if (item.type === 'lastWeekdayOccurrence') {
@@ -559,6 +574,12 @@ function getDowName(dayNum, locale, cronType) {
     index = dayNum % 7;
   }
   return locale.daysOfWeek[index];
+}
+
+function excludedDayName(dow, locale, cronType) {
+  if (!dow.values) return null;
+  const names = new Set(dow.values.map((day) => getDowName(day, locale, cronType)));
+  return names.size === 6 ? locale.daysOfWeek.find((day) => !names.has(day)) : null;
 }
 
 function getOrdinalEn(n) {

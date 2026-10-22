@@ -50,7 +50,9 @@ export function getNextRunTimes(expression, options = {}) {
   const startParts = getZonedParts(refDate, timeZone);
 
   const startYear = startParts.year;
-  const maxYear = Math.min(startYear + 10, 2099);
+  // The parser supports years through 2099. Iterate calendar fields directly,
+  // so sparse schedules can reach distant years without scanning every minute.
+  const maxYear = 2099;
 
   const f = parsed.fields;
   const cronType = parsed.type;
@@ -144,7 +146,7 @@ function matchesDay(day, month, year, dom, dow, cronType, daysInMonth) {
   const quartzDow = dowUtc === 0 ? 1 : dowUtc + 1; // 1 = Sun, 7 = Sat
 
   const domMatch = matchesDom(day, month, year, dom, daysInMonth);
-  const dowMatch = matchesDow(dowUtc, quartzDow, day, daysInMonth, dow, cronType);
+  const dowMatch = matchesDow(dowUtc, quartzDow, day, daysInMonth, dow, cronType, year, month);
 
   const domRestricted = !dom.isWildcard && !dom.isQuestion;
   const dowRestricted = !dow.isWildcard && !dow.isQuestion;
@@ -188,7 +190,7 @@ function matchesDom(day, month, year, dom, daysInMonth) {
   return false;
 }
 
-function matchesDow(dowUtc, quartzDow, day, daysInMonth, dow, cronType) {
+function matchesDow(dowUtc, quartzDow, day, daysInMonth, dow, cronType, year, month) {
   if (dow.isWildcard || dow.isQuestion) return true;
 
   if (dow.values) {
