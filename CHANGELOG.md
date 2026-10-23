@@ -9,10 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Reproducible terminal SVG demo, bilingual quick start and FAQ, native Node.js test coverage, and weekly CodeQL analysis.
+- Weekly npm and GitHub Actions dependency updates.
 - Warnings and JSON `neverMatches` for expressions with no future date through 2099; successful exit code remains 0.
 - Regression tests for Quartz nth/last weekdays, impossible dates, sparse schedules, and DST skip behavior.
 - Trusted npm publishing workflow triggered by version tags, with provenance and a tag/version check.
-- Bug and feature issue forms, pull request template, Contributor Covenant 2.1, and monthly GitHub Actions updates.
+- Bug and feature issue forms, pull request template, and Contributor Covenant 2.1.
 - Offline basic and Quartz examples, exercised in CI.
 - CI and MIT badges, bilingual exit-code documentation, and executable README output checks in lint.
 
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Avoid silently accepting invalid language, date, format, DST policy, or truncated numeric CLI values.
 - Replace stale README outputs with real runs from fixed start dates and natural Turkish explanations.
 
-## [0.1.0] - 2026-10-22
+## [0.1.0] - 2026-10-23
 
 ### Added
 - Core parser supporting 5-field (Unix), 6-field (seconds or year), and 7-field (Quartz) expressions.

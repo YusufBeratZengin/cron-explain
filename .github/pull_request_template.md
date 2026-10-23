@@ -10,6 +10,8 @@ Link the issue, if applicable.
 
 - [ ] Meaningful tests added or updated
 - [ ] `npm run lint` and `npm test` pass
+- [ ] Coverage reviewed; uncovered behavior has meaningful tests
+- [ ] `npm run demo` leaves `docs/demo.svg` unchanged
 - [ ] `npm pack --dry-run` contains only the intended files
 - [ ] CHANGELOG updated
 - [ ] English and Turkish documentation updated

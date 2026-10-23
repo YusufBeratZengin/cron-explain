@@ -19,10 +19,13 @@ The project has zero runtime dependencies and zero dev dependencies. Node.js bui
 
 ## Running Tests and Lint
 
-Run tests:
+Run tests with Node's built-in line, branch, and function coverage report:
 ```bash
 npm test
 ```
+
+Aim for at least 85% line coverage. Add behavior-focused tests for uncovered
+branches rather than assertions that only repeat the implementation.
 
 Run syntax, style, and executable README checks:
 ```bash
@@ -39,6 +42,16 @@ npm pack --dry-run
 `scripts/check-readme.js` verifies every marked command/output pair in both
 READMEs. CLI examples must include an explicit `--start` and `--tz` so the
 output stays reproducible. Keep the two documents in sync.
+
+Regenerate the terminal image after changing the demo command or its output:
+
+```bash
+npm run demo
+```
+
+The command pipes actual CLI output into `scripts/make-demo.mjs`. The generator
+compares it with the marked English README transcript before writing
+`docs/demo.svg`; CI also checks that regeneration leaves the image unchanged.
 
 ## Guidelines
 

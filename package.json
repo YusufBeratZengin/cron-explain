@@ -13,7 +13,8 @@
     "./locales/*": "./locales/*"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node --experimental-test-coverage --test",
+    "demo": "node bin/cron-explain.js \"*/15 9-17 * * 1-5\" --next 10 --tz UTC --lang en --start 2026-10-23T08:00:00Z | node scripts/make-demo.mjs",
     "lint": "node scripts/check-syntax.js && node scripts/check-readme.js",
     "prepublishOnly": "npm run lint && npm test"
   },

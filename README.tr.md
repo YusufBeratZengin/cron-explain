@@ -1,10 +1,32 @@
 # cron-explain
+
 [![CI](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/npm/v/cron-explain)](https://www.npmjs.com/package/cron-explain) ![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-green.svg) ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-blue.svg)
+
 [English](README.md) | Türkçe
 
 Cron ifadelerini Türkçe veya İngilizce açıklar, doğrular ve seçtiğiniz zaman diliminde sonraki çalışma zamanlarını hesaplar.
 Node.js >=20 üzerinde ESM ile çalışır; bağımlılığı yoktur ve internet bağlantısı kullanmaz.
-Kurulum: `npm install cron-explain` (CLI için: `npm install --global cron-explain`).
+
+![Hafta içi cron ifadesinin İngilizce açıklaması ve UTC ile sonraki on çalışma zamanı](docs/demo.svg)
+
+## Neden cron-explain?
+
+- Türkçe ek kurallarına uygun, doğal Türkçe ve İngilizce açıklamalar üretir.
+- Unix ve Quartz sözdizimini, IANA zaman dilimlerini ve açık DST politikalarını tek bir CLI ve ESM kütüphanesinde sunar.
+- Çalışma zamanı bağımlılığı olmadan çevrimdışı çalışır; tekrarlanabilir metin veya JSON çıktısı verir.
+
+## Hızlı başlangıç
+
+Node.js >=20 ile herkese açık repoyu deneyin; paket kurulumu gerekmez:
+
+```bash
+git clone https://github.com/YusufBeratZengin/cron-explain.git
+cd cron-explain
+node bin/cron-explain.js "*/15 9-17 * * 1-5" --next 10 --tz UTC --lang en --start 2026-10-23T08:00:00Z
+```
+
+Bu komut görseldeki İngilizce çıktıyı üretir. Türkçe çıktı için `--lang tr` kullanın.
+npm üzerinden dağıtım bilgisi [Kurulum](#kurulum) bölümündedir.
 
 ## Demo
 
@@ -24,19 +46,35 @@ Sonraki 2 Çalışma Zamanı:
 
 <!-- check-readme -->
 ```console
-$ cron-explain "*/15 9-17 * * 1-5" --next 2 --tz UTC --lang en --start 2026-10-22T08:00:00Z
+$ cron-explain "*/15 9-17 * * 1-5" --next 10 --tz UTC --lang en --start 2026-10-23T08:00:00Z
 Expression: */15 9-17 * * 1-5
 Explanation: Every 15 minutes, between 09:00 and 17:59, on Monday through Friday
 Time Zone: UTC
 
-Next 2 run times:
-1. 2026-10-22 09:00:00 (+00:00)
-2. 2026-10-22 09:15:00 (+00:00)
+Next 10 run times:
+1. 2026-10-23 09:00:00 (+00:00)
+2. 2026-10-23 09:15:00 (+00:00)
+3. 2026-10-23 09:30:00 (+00:00)
+4. 2026-10-23 09:45:00 (+00:00)
+5. 2026-10-23 10:00:00 (+00:00)
+6. 2026-10-23 10:15:00 (+00:00)
+7. 2026-10-23 10:30:00 (+00:00)
+8. 2026-10-23 10:45:00 (+00:00)
+9. 2026-10-23 11:00:00 (+00:00)
+10. 2026-10-23 11:15:00 (+00:00)
 ```
 
 ## Kurulum
 
-Kütüphane için yukarıdaki kurulum komutunu, CLI için global kurulumu kullanın.
+Paket npm'de yayımlandığında:
+
+```bash
+npm install cron-explain
+# CLI için global kurulum:
+npm install --global cron-explain
+```
+
+npm sürüm rozeti kayıt defterindeki durumu gösterir; ilk yayımdan önce sürüm bilgisi görünmeyebilir.
 Repoyu kurulum yapmadan denemek için örneklerdeki `cron-explain` yerine `node bin/cron-explain.js` yazın.
 
 ## Kullanım
@@ -206,7 +244,21 @@ Geri saat geçişinde tekrarlanan bir yerel saat, her iki politikada da ilk
 geçişte bir kez kullanılır. New York'ta tekrarlanan aralık 01:00–01:59'dur;
 02:30, değişimden sonra bir kez yaşanır.
 
-## Sınırlar ve gizlilik
+## Sık sorulan sorular ve sınırlar
+
+**Görevlerimi çalıştırır mı?** Takvim hesaplar ve açıklar. Görevleri çalıştırmak için bir zamanlayıcı kullanın.
+
+**Altı alanlı ifadeler neden farklı yorumlanabiliyor?** İlk dakika alanı açıkça
+belirtildiğinde, sondaki dört basamaklı sayı veya yıl aralığı yıl olarak yorumlanır.
+Diğer durumlarda ilk alan saniyedir. Saniyeden yıla kadar tüm alanları açıkça
+belirtmek için yedi alan kullanın. Desteklenen biçimler [Kullanım](#kullanım) bölümündedir.
+
+**Yaz saati geçişinde sonuçlar neden değişiyor?** `--dst shift`, olmayan yerel
+saatleri sonraki geçerli saatin başına taşır; `--dst skip` bu çalışmaları atlar.
+Tekrarlanan saatlerde ilk geçiş kullanılır. Sonuçları karşılaştırırken `--start`
+ve `--tz` değerlerini sabitleyin.
+
+### Sınırlar ve gizlilik
 
 Yıl alanı 1970–2099 aralığını destekler; gelecek tarih araması 2099'da biter ve
 istenenden az sonuç döndürebilir. `@reboot` açıklanabilir ancak sonraki tarihleri hesaplanmaz.
@@ -222,8 +274,14 @@ Yerel repoda şu komutları çalıştırın:
 npm ci
 npm run lint
 npm test
+npm run demo
 npm pack --dry-run
 ```
+
+`npm test`, Node'un yerleşik satır, dal ve fonksiyon kapsam raporunu yazdırır;
+harici kapsam servisi veya token gerekmez. `npm run demo`, gerçek CLI çıktısını
+[scripts/make-demo.mjs](scripts/make-demo.mjs) üreticisine aktararak SVG'yi yeniler.
+CI, üretilen görselin repodaki dosyayla aynı olduğunu kontrol eder.
 
 Lint, JavaScript sözdizimi ve stil kontrollerinin yanında işaretli README
 örneklerini sabit başlangıçlarla çalıştırır; stdout ve çıkış kodunu karşılaştırır.

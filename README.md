@@ -1,23 +1,53 @@
 # cron-explain
+
 [![CI](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml/badge.svg)](https://github.com/YusufBeratZengin/cron-explain/actions/workflows/ci.yml) [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![npm](https://img.shields.io/npm/v/cron-explain)](https://www.npmjs.com/package/cron-explain) ![Node.js >=20](https://img.shields.io/badge/node-%3E%3D20-green.svg) ![Dependencies: 0](https://img.shields.io/badge/dependencies-0-blue.svg)
+
 English | [Türkçe](README.tr.md)
 
 Parse, validate, and explain cron expressions in English or Turkish, and list future runs in an IANA time zone.
 Runs offline on Node.js >=20 with ESM and zero dependencies.
-Install: `npm install cron-explain` (CLI: `npm install --global cron-explain`).
+
+![Terminal showing a weekday cron explanation and ten next runs in UTC](docs/demo.svg)
+
+## Why cron-explain?
+
+- English and natural Turkish explanations, including Turkish suffix rules.
+- Unix and Quartz syntax, IANA time zones, and explicit DST policies in one CLI and ESM library.
+- Zero runtime dependencies, offline processing, and reproducible text or JSON output.
+
+## Quick start
+
+Try the public checkout with Node.js >=20; no package installation is needed:
+
+```bash
+git clone https://github.com/YusufBeratZengin/cron-explain.git
+cd cron-explain
+node bin/cron-explain.js "*/15 9-17 * * 1-5" --next 10 --tz UTC --lang en --start 2026-10-23T08:00:00Z
+```
+
+The command prints the transcript below. For npm distribution, see [Install](#install).
 
 ## Demo
 
+<!-- demo-command -->
 <!-- check-readme -->
 ```console
-$ cron-explain "*/15 9-17 * * 1-5" --next 2 --tz UTC --lang en --start 2026-10-22T08:00:00Z
+$ cron-explain "*/15 9-17 * * 1-5" --next 10 --tz UTC --lang en --start 2026-10-23T08:00:00Z
 Expression: */15 9-17 * * 1-5
 Explanation: Every 15 minutes, between 09:00 and 17:59, on Monday through Friday
 Time Zone: UTC
 
-Next 2 run times:
-1. 2026-10-22 09:00:00 (+00:00)
-2. 2026-10-22 09:15:00 (+00:00)
+Next 10 run times:
+1. 2026-10-23 09:00:00 (+00:00)
+2. 2026-10-23 09:15:00 (+00:00)
+3. 2026-10-23 09:30:00 (+00:00)
+4. 2026-10-23 09:45:00 (+00:00)
+5. 2026-10-23 10:00:00 (+00:00)
+6. 2026-10-23 10:15:00 (+00:00)
+7. 2026-10-23 10:30:00 (+00:00)
+8. 2026-10-23 10:45:00 (+00:00)
+9. 2026-10-23 11:00:00 (+00:00)
+10. 2026-10-23 11:15:00 (+00:00)
 ```
 
 The start date is fixed so you can reproduce the output. Use `--lang tr` for Turkish:
@@ -36,7 +66,15 @@ Sonraki 2 Çalışma Zamanı:
 
 ## Install
 
-Use the install command above for the library, or the global install for the CLI.
+Once the package is available on npm:
+
+```bash
+npm install cron-explain
+# Or install the CLI globally:
+npm install --global cron-explain
+```
+
+The npm version badge reflects registry availability; it may be unavailable before the first publication.
 To try the checkout without installing, replace `cron-explain` with `node bin/cron-explain.js` in the examples.
 
 ## Usage
@@ -202,7 +240,20 @@ Rules come from Node's `Intl` data. For a missing local time during spring-forwa
 During fall-back, an ambiguous local time runs once at its first occurrence under
 either policy. In New York, the repeated hour is 01:00–01:59; 02:30 occurs once after the change.
 
-## Limitations and privacy
+## FAQ and limitations
+
+**Does it run my jobs?** It calculates and explains schedules. Use a scheduler to execute them.
+
+**Why can two six-field expressions behave differently?** A trailing four-digit year
+or year range is interpreted as a year when the leading minute is explicit;
+otherwise the first field represents seconds. Use seven fields for an unambiguous
+seconds-through-year expression. See [Usage](#usage) for the supported forms.
+
+**Why do results change around DST?** `--dst shift` moves missing local times to
+the next valid hour; `--dst skip` omits them. Repeated times use their first occurrence.
+Pin `--start` and `--tz` when comparing results.
+
+### Limits and privacy
 
 Explicit years are 1970–2099; future searches stop at 2099 and can return fewer
 dates than requested. `@reboot` can be explained but has no next dates.
@@ -218,8 +269,14 @@ In a local checkout, run:
 npm ci
 npm run lint
 npm test
+npm run demo
 npm pack --dry-run
 ```
+
+`npm test` prints Node's built-in line, branch, and function coverage report;
+no external coverage service or token is required. `npm run demo` pipes real CLI
+output into [scripts/make-demo.mjs](scripts/make-demo.mjs) and regenerates the SVG.
+CI checks that the generated image matches the committed file.
 
 Lint checks JavaScript syntax/style and executes the marked README examples with
 fixed starts, comparing stdout and exit status. CI runs the checks and both offline

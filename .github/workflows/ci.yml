@@ -39,8 +39,13 @@ jobs:
       - name: Syntax check
         run: npm run lint
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: npm test
+
+      - name: Check demo is reproducible
+        run: |
+          npm run demo
+          git diff --exit-code -- docs/demo.svg
 
       - name: Run basic offline example
         run: node examples/basic.mjs
