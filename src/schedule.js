@@ -27,6 +27,10 @@ export function getNextRunTimes(expression, options = {}) {
     count = 5,
     dstPolicy = 'shift',
   } = options;
+  if (!Number.isSafeInteger(count) || count < 0) {
+    throw new Error('count must be a nonnegative integer.');
+  }
+  if (count === 0) return [];
 
   let timeZone = options.timeZone;
   if (!timeZone) {
@@ -41,7 +45,7 @@ export function getNextRunTimes(expression, options = {}) {
     throw new Error(`Invalid IANA time zone: '${timeZone}'`);
   }
 
-  const refDate = options.startDate ? new Date(options.startDate) : new Date();
+  const refDate = options.startDate !== undefined ? new Date(options.startDate) : new Date();
   if (isNaN(refDate.getTime())) {
     throw new Error(`Invalid startDate: '${options.startDate}'`);
   }
@@ -50,9 +54,10 @@ export function getNextRunTimes(expression, options = {}) {
   const startParts = getZonedParts(refDate, timeZone);
 
   const startYear = startParts.year;
-  // The parser supports years through 2099. Iterate calendar fields directly,
+  // EventBridge supports years through 2199; other dialects retain 2099.
+  // Iterate calendar fields directly,
   // so sparse schedules can reach distant years without scanning every minute.
-  const maxYear = 2099;
+  const maxYear = parsed.dialect === 'eventbridge' ? 2199 : 2099;
 
   const f = parsed.fields;
   const cronType = parsed.type;
@@ -181,8 +186,8 @@ function matchesDom(day, month, year, dom, daysInMonth) {
     } else if (item.type === 'daysBeforeEndOfMonth') {
       if (day === daysInMonth - item.offset) return true;
     } else if (item.type === 'nearestWeekday') {
-      const targetDay = item.day > daysInMonth ? daysInMonth : item.day;
-      const nearest = getNearestWeekday(year, month, targetDay, daysInMonth);
+      if (item.day > daysInMonth) continue;
+      const nearest = getNearestWeekday(year, month, item.day, daysInMonth);
       if (day === nearest) return true;
     }
   }

@@ -56,7 +56,7 @@ export function tokenizeExpression(raw) {
  * Parse and validate a cron expression string.
  * @param {string} expression
  * @param {Object} [options]
- * @param {'auto' | 'unix' | 'quartz'} [options.type='auto']
+ * @param {'auto' | 'unix' | 'quartz' | 'eventbridge'} [options.type='auto']
  * @returns {Object} Parsed cron structure
  */
 export function parseCron(expression, options = {}) {
@@ -99,7 +99,15 @@ export function parseCron(expression, options = {}) {
     return parsed;
   }
 
-  return parseCronFields(expression, expression, options);
+  // AWS EventBridge: cron(minutes hours day-of-month month day-of-week year)
+  const eventBridge = /^cron\(([\s\S]*)\)$/i.exec(trimmed);
+  if (eventBridge) {
+    const offset = expression.indexOf('(') + 1;
+    return parseCronFields(eventBridge[1], expression, { ...options, eventBridgeOffset: offset });
+  }
+
+  return parseCronFields(expression, expression, options.type === 'eventbridge'
+    ? { ...options, eventBridgeOffset: 0 } : options);
 }
 
 /**
@@ -111,8 +119,44 @@ export function parseCron(expression, options = {}) {
 function parseCronFields(fieldString, originalExpression, options = {}) {
   const tokens = tokenizeExpression(fieldString);
   const count = tokens.length;
+  const eventBridge = options.eventBridgeOffset !== undefined;
+  if (eventBridge) {
+    // Keep error markers aligned with the original `cron(...)` text.
+    for (const token of tokens) {
+      token.start += options.eventBridgeOffset;
+      token.end += options.eventBridgeOffset;
+    }
+    if (count !== 6) {
+      const start = tokens.length > 0 ? tokens[0].start : options.eventBridgeOffset;
+      const end = tokens.length > 0 ? tokens[tokens.length - 1].end : start;
+      throw new CronValidationError({
+        message: `EventBridge cron() needs exactly 6 fields (minutes hours day-of-month month day-of-week year), but got ${count}.`,
+        expression: originalExpression,
+        startCol: start,
+        endCol: end,
+      });
+    }
+    const [, , dom, , dow] = tokens;
+    if ((dom.text === '?') === (dow.text === '?')) {
+      throw new CronValidationError({
+        message: 'EventBridge requires a ? in exactly one of day-of-month and day-of-week.',
+        expression: originalExpression,
+        startCol: dom.start,
+        endCol: dow.end,
+      });
+    }
+    if (dow.text.includes('/') || (dow.text.includes('#') && dow.text.includes(','))) {
+      throw new CronValidationError({
+        message: 'EventBridge day-of-week does not support steps or lists with #.',
+        expression: originalExpression,
+        fieldName: 'dayOfWeek',
+        startCol: dow.start,
+        endCol: dow.end,
+      });
+    }
+  }
 
-  if (count < 5 || count > 7) {
+  if (!eventBridge && (count < 5 || count > 7)) {
     const start = tokens.length > 0 ? tokens[0].start : 0;
     const end = tokens.length > 0 ? tokens[tokens.length - 1].end : fieldString.length;
     throw new CronValidationError({
@@ -126,7 +170,18 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
   let cronType = options.type || 'auto';
   let fieldTokens = [];
 
-  if (count === 5) {
+  if (eventBridge) {
+    fieldTokens = [
+      { text: '0', start: 0, end: 0, virtual: true, name: 'second' },
+      { ...tokens[0], name: 'minute' },
+      { ...tokens[1], name: 'hour' },
+      { ...tokens[2], name: 'dayOfMonth' },
+      { ...tokens[3], name: 'month' },
+      { ...tokens[4], name: 'dayOfWeek' },
+      { ...tokens[5], name: 'year' },
+    ];
+    cronType = 'quartz';
+  } else if (count === 5) {
     // Unix standard: minute, hour, dom, month, dow
     fieldTokens = [
       { text: '0', start: 0, end: 0, virtual: true, name: 'second' },
@@ -138,7 +193,7 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
       { text: '*', start: 0, end: 0, virtual: true, name: 'year' },
     ];
     if (cronType === 'auto') {
-      const hasQuartzChars = tokens.some((t) => /[?LW#]/.test(t.text));
+      const hasQuartzChars = hasQuartzSpecial(tokens[2], tokens[4]);
       cronType = hasQuartzChars ? 'quartz' : 'unix';
     }
   } else if (count === 6) {
@@ -146,7 +201,7 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
     const lastToken = tokens[5].text;
     const isYearLast = /^\d{4}(-\d{4})?$/.test(lastToken);
 
-    if (isYearLast && !tokens[0].text.includes('*') && !/^\d{4}/.test(tokens[0].text)) {
+    if (cronType !== 'quartz' && isYearLast && !tokens[0].text.includes('*') && !/^\d{4}/.test(tokens[0].text)) {
       // Unix + year: minute, hour, dom, month, dow, year
       fieldTokens = [
         { text: '0', start: 0, end: 0, virtual: true, name: 'second' },
@@ -170,7 +225,7 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
         { text: '*', start: 0, end: 0, virtual: true, name: 'year' },
       ];
       if (cronType === 'auto') {
-        const hasQuartzChars = tokens.some((t) => /[?LW#]/.test(t.text));
+        const hasQuartzChars = hasQuartzSpecial(tokens[3], tokens[5]);
         cronType = hasQuartzChars ? 'quartz' : 'unix';
       }
     }
@@ -192,7 +247,8 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
   const parsedFields = {};
   for (let i = 0; i < fieldTokens.length; i++) {
     const fToken = fieldTokens[i];
-    const def = FIELD_DEFINITIONS[i];
+    const def = eventBridge && i === 6
+      ? { ...FIELD_DEFINITIONS[i], max: 2199 } : FIELD_DEFINITIONS[i];
     const parsedField = parseSingleField(
       fToken,
       def,
@@ -209,8 +265,15 @@ function parseCronFields(fieldString, originalExpression, options = {}) {
     isReboot: false,
     fieldsCount: count,
     type: cronType,
+    ...(eventBridge ? { dialect: 'eventbridge' } : {}),
     fields: parsedFields,
   };
+}
+
+function hasQuartzSpecial(dom, dow) {
+  return dom.text.split(',').some((part) => /^(?:\?|L|LW|L-\d+|\d+W)$/i.test(part)) ||
+    dow.text.split(',').some((part) => /^(?:\?|L|(?:[A-Z]+|\d+)L|(?:[A-Z]+|\d+)#\d+)$/i.test(part)) ||
+    /[?#]/.test(`${dom.text},${dow.text}`);
 }
 
 /**
@@ -308,6 +371,7 @@ function parseSingleField(token, def, cronType, originalExpression, fieldIndex) 
  * Parse a single comma-separated item in a field (e.g. "*", "1-5", step, "LW", "5L", "5#3").
  */
 function parsePartItem(part, def, cronType, originalExpression, fieldIndex, startCol, endCol) {
+  const upper = part.toUpperCase();
   const isDom = def.name === 'dayOfMonth';
   const isDow = def.name === 'dayOfWeek';
 
@@ -341,13 +405,19 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
     let min = def.min;
     let max = def.max;
 
-    if (rangePart === '*' || rangePart === '?') {
+    if (rangePart === '*') {
       // Step over full range
       if (def.name === 'dayOfWeek') {
         min = cronType === 'quartz' ? 1 : 0;
         max = cronType === 'quartz' ? 7 : 6;
       }
     } else if (rangePart.includes('-')) {
+      if (rangePart.split('-').length !== 2) {
+        throw new CronValidationError({
+          message: `Invalid range '${rangePart}' in ${def.name}.`,
+          expression: originalExpression, fieldIndex, fieldName: def.name, startCol, endCol,
+        });
+      }
       const [rMinStr, rMaxStr] = rangePart.split('-');
       min = resolveValue(rMinStr, def, cronType, originalExpression, fieldIndex, startCol, endCol);
       max = resolveValue(rMaxStr, def, cronType, originalExpression, fieldIndex, startCol, endCol);
@@ -388,8 +458,9 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
   if (part === '*') {
     let min = def.min;
     let max = def.max;
-    if (def.name === 'dayOfWeek' && cronType !== 'quartz' && max === 7) {
-      max = 6;
+    if (def.name === 'dayOfWeek') {
+      min = cronType === 'quartz' ? 1 : 0;
+      max = cronType === 'quartz' ? 7 : 6;
     }
     const values = [];
     for (let v = min; v <= max; v++) {
@@ -404,13 +475,13 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
 
   // Day-of-Month Quartz specials: L, LW, L-offset, nW
   if (isDom) {
-    if (part === 'L') {
+    if (upper === 'L') {
       return { type: 'lastDayOfMonth', raw: part, values: null };
     }
-    if (part === 'LW') {
+    if (upper === 'LW') {
       return { type: 'lastWeekdayOfMonth', raw: part, values: null };
     }
-    const lOffsetMatch = /^L-(\d+)$/.exec(part);
+    const lOffsetMatch = /^L-(\d+)$/.exec(upper);
     if (lOffsetMatch) {
       const offset = parseInt(lOffsetMatch[1], 10);
       if (offset < 1 || offset > 30) {
@@ -425,7 +496,7 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
       }
       return { type: 'daysBeforeEndOfMonth', offset, raw: part, values: null };
     }
-    const wMatch = /^(\d+)W$/.exec(part);
+    const wMatch = /^(\d+)W$/.exec(upper);
     if (wMatch) {
       const day = parseInt(wMatch[1], 10);
       if (day < 1 || day > 31) {
@@ -444,13 +515,13 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
 
   // Day-of-Week Quartz specials: L, dL, d#nth
   if (isDow) {
-    if (part === 'L') {
+    if (upper === 'L') {
       // Last day of week (Saturday = 7 in Quartz, 6 in Unix)
       const dayVal = cronType === 'quartz' ? 7 : 6;
       return { type: 'number', value: dayVal, raw: part, values: [dayVal] };
     }
     // dL: e.g. 5L or FRIL (last Friday of month)
-    const dlMatch = /^([A-Za-z]+|\d+)L$/.exec(part);
+    const dlMatch = /^([A-Za-z]+|\d+)L$/.exec(upper);
     if (dlMatch) {
       const dowVal = resolveDowValue(
         dlMatch[1],
@@ -463,7 +534,7 @@ function parsePartItem(part, def, cronType, originalExpression, fieldIndex, star
       return { type: 'lastWeekdayOccurrence', dayOfWeek: dowVal, raw: part, values: null };
     }
     // d#nth: e.g. 5#3 or FRI#3 (3rd Friday of month)
-    const hashMatch = /^([A-Za-z]+|\d+)#(\d+)$/.exec(part);
+    const hashMatch = /^([A-Za-z]+|\d+)#(\d+)$/.exec(upper);
     if (hashMatch) {
       const dowVal = resolveDowValue(
         hashMatch[1],

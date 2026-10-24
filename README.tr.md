@@ -4,15 +4,15 @@
 
 [English](README.md) | Türkçe
 
-Cron ifadelerini Türkçe veya İngilizce açıklar, doğrular ve seçtiğiniz zaman diliminde sonraki çalışma zamanlarını hesaplar.
+Cron ifadelerini Türkçe, İngilizce, Almanca veya İspanyolca açıklar, doğrular ve seçtiğiniz zaman diliminde sonraki çalışma zamanlarını hesaplar.
 Node.js >=20 üzerinde ESM ile çalışır; bağımlılığı yoktur ve internet bağlantısı kullanmaz.
 
 ![Hafta içi cron ifadesinin İngilizce açıklaması ve UTC ile sonraki on çalışma zamanı](docs/demo.svg)
 
 ## Neden cron-explain?
 
-- Türkçe ek kurallarına uygun, doğal Türkçe ve İngilizce açıklamalar üretir.
-- Unix ve Quartz sözdizimini, IANA zaman dilimlerini ve açık DST politikalarını tek bir CLI ve ESM kütüphanesinde sunar.
+- Türkçe ek kuralları dahil dört dilde açıklamalar üretir.
+- Unix, Quartz ve AWS EventBridge sözdizimini, takvim karşılaştırmasını ve terminal takvimini tek bir CLI ve ESM kütüphanesinde sunar.
 - Çalışma zamanı bağımlılığı olmadan çevrimdışı çalışır; tekrarlanabilir metin veya JSON çıktısı verir.
 
 ## Hızlı başlangıç
@@ -85,6 +85,83 @@ Repoyu kurulum yapmadan denemek için örneklerdeki `cron-explain` yerine `node 
 Quartz için `?`, `L`, `LW`, `L-n`, `nW`, `dL` ve `d#n` kullanılabilir.
 Takma adlar: `@yearly`, `@annually`, `@monthly`, `@weekly`, `@daily`, `@midnight`, `@hourly`, `@reboot`.
 
+### EventBridge ve Quartz
+
+AWS EventBridge biçimi `cron(dakika saat ayın-günü ay haftanın-günü yıl)` şeklindedir:
+altı alanlıdır, saniye içermez, 1970–2199 yıllarını destekler ve iki gün alanından
+tam biri `?` olmalıdır. Haftanın günleri 1=Pazar ile 7=Cumartesi arasındadır.
+Sarmalayıcı olmadan `--type eventbridge` veya `parseCron(metin, { type: 'eventbridge' })`
+kullanın. `cron(...)` otomatik tanınır; yalın ifadelerde mevcut otomatik yorum korunur.
+EventBridge haftanın gününde adım ve `#` içeren liste kabul etmez.
+
+Quartz'ta ilk alan saniyedir; isteğe bağlı yedinci alan yıldır (1970–2099).
+Açık seçim için `--type quartz` kullanın. Büyük/küçük harf duyarsız özel işaretler:
+`L` (son gün), `LW` (son iş günü), `L-3`, `15W` (ay sınırını aşmadan en yakın iş günü),
+`FRIL` (son Cuma) ve `MON#3` (üçüncü Pazartesi).
+[AWS sözdizimi](https://docs.aws.amazon.com/scheduler/latest/UserGuide/schedule-types.html)
+ve [Quartz kılavuzuna](https://www.quartz-scheduler.org/documentation/quartz-2.2.2/tutorials/crontrigger) bakın.
+Hesaplama kütüphanenin mevcut yerel DST politikasını kullanır; barındırılan servisin
+tüm davranışlarını taklit etmez. UTC tabanlı EventBridge kuralları için `--tz UTC` kullanın.
+
+```bash
+cron-explain "cron(0 12 ? * MON-FRI *)" --lang de --tz UTC --start 2026-10-30T00:00:00Z
+cron-explain "0 12 ? * MON-FRI *" --type eventbridge --lang es --tz UTC --start 2026-10-30T00:00:00Z
+cron-explain "15 0 9 LW * ?" --type quartz --next 3 --tz UTC --start 2026-10-30T00:00:00Z
+```
+
+### İki takvimi karşılaştırma
+
+`diff`, iki takvimin sonraki `--next N` **farklı çalışma anını** birleştirerek zaman
+sırasıyla gösterir: `yalnız A`, `yalnız B`, `ikisi de`. N, yalnız farklı olanları
+değil birleşik sonuç sayısını sınırlar; aynı takvimlerde `ikisi de` görünür.
+İfadeleri ayrı ayrı tırnaklayın. `--start`, `--tz`, `--dst` ve `--type` ikisine de uygulanır.
+İsteğe bağlı `--days N`, aramayı `(başlangıç, başlangıç + N × 24 saat]` aralığıyla
+sınırlar. Verilmezse her sözdiziminin desteklediği son yıla kadar hesaplanır.
+
+```bash
+cron-explain diff "*/15 * * * *" "*/20 * * * *" --next 8 --lang tr --tz UTC --start 2026-10-30T00:00:00Z
+cron-explain diff "@daily" "0 12 * * *" --days 7 --format json --tz UTC --start 2026-10-30T00:00:00Z
+```
+
+<!-- check-readme -->
+```console
+$ cron-explain diff "*/15 * * * *" "*/20 * * * *" --next 6 --lang tr --tz UTC --start 2026-10-30T00:00:00Z
+İfade A: */15 * * * *
+Açıklama A: Her 15 dakikada bir
+İfade B: */20 * * * *
+Açıklama B: Her 20 dakikada bir
+Zaman Dilimi: UTC
+
+Sonraki 6 Çalışma Zamanı:
+1. [yalnız A] 2026-10-30 00:15:00 (+00:00)
+2. [yalnız B] 2026-10-30 00:20:00 (+00:00)
+3. [yalnız A] 2026-10-30 00:30:00 (+00:00)
+4. [yalnız B] 2026-10-30 00:40:00 (+00:00)
+5. [yalnız A] 2026-10-30 00:45:00 (+00:00)
+6. [ikisi de] 2026-10-30 01:00:00 (+00:00)
+```
+
+JSON alanları: `a`, `b`, `timeZone`, `days`, `windowStart`, `windowEnd`, `runs`.
+Her çalışmada `source` (`a`, `b`, `both`), `utc` ve `formatted` bulunur.
+Aralık verilmezse `days` ve `windowEnd` null olur. Gelecek çalışma yoksa boş liste
+ve çıkış kodu 0 döner; sonuçlar gösterilen aralık dışında eşitlik iddiası taşımaz.
+
+### Aylık terminal takvimi
+
+```bash
+cron-explain "@daily" --calendar --next 10 --tz Europe/Istanbul --lang tr --start 2026-10-30T00:00:00Z
+```
+
+`--calendar`, metin çalışma listesini sonraki `--next N` çalışma için Pazartesi
+başlangıçlı ay ızgaralarıyla değiştirir. Her ilgili ayın `YYYY-MM` başlığı vardır.
+`GG:n`, seçilen çalışmalardan o yerel güne düşen sayıyı; `GG .`, o gün seçilen
+çalışma olmadığını gösterir. Tüm günün çalışma sayısı anlamına gelmez.
+99'dan büyük sayılar da tam yazılır. Seyrek takvimler yıllara yayılabilir;
+yalnız seçilen çalışmaların bulunduğu aylar gösterilir.
+`--next 0`, `@reboot` ve tükenmiş takvimlerde sonuç boştur.
+JSON'da `nextRuns` korunur, `calendar: [{ date: 'YYYY-MM-DD', runs: n }]` eklenir.
+`--calendar` ve `diff` birlikte kullanılamaz.
+
 ### Kütüphane API'si
 
 ```js
@@ -106,6 +183,30 @@ const formatted = runs.map((date) => formatZonedDate(date, 'Europe/Istanbul'));
 `getNextRunTimes`, `Date[]` döndürür; başlangıç anı sonuçlara dahil edilmez.
 `parseCron` hatalı ifadede `CronValidationError` verir; `validateCron` doğrulama sonucu döndürür.
 Zaman dilimi ve Türkçe ek yardımcıları da dışa aktarılır; [src/index.js](src/index.js) dosyasına bakın.
+
+```js
+import { parseCron, explainCron, compareSchedules, getCalendar, renderCalendar, findOverlaps } from 'cron-explain';
+
+const options = { startDate: '2026-10-30T00:00:00Z', timeZone: 'UTC', count: 8 };
+const aws = parseCron('0 12 ? * MON-FRI *', { type: 'eventbridge' });
+const german = explainCron(aws, { lang: 'de' }); // en, tr, de, es; bilinmeyen dil en olur
+const comparison = compareSchedules('*/15 * * * *', '*/20 * * * *', options);
+// comparison.runs: [{ date: Date, source: 'a' | 'b' | 'both' }]; windowEnd: Date | null
+const calendar = getCalendar('@daily', options);
+// calendar.days: [{ date: 'YYYY-MM-DD', weekday: 0..6 (Pazartesi ilk), runs: number }]
+const text = renderCalendar(calendar);
+const common = findOverlaps('@daily', '0 0 * * *', { ...options, days: 7, limit: 3 });
+// common: { overlaps: Date[], total, capped, windowEnd: Date }
+```
+
+`compareSchedules` ve `getCalendar`, metin veya ayrıştırılmış ifade ve
+`getNextRunTimes` seçeneklerini kabul eder. Başlangıç hariçtir; `count` varsayılanı
+5'tir ve sıfır olabilir. Karşılaştırmada isteğe bağlı pozitif `days` aralığı vardır.
+`findOverlaps`, bir aralıktaki ortak çalışmaları sayar (varsayılan 365 gün), ilk
+`limit` adedini saklar (varsayılan 10); `maxRuns`, ifade başına taramayı sınırlar
+(varsayılan 200000). `capped: true` olduğunda `total` kısmi sayımdır.
+`getCalendar`, sabit sayıda çalışmayı grupladığı için `capped: false` döndürür.
+Mevcut API imzaları ile varsayılan İngilizce/Türkçe çıktı uyumluluğu korunur.
 
 ### JSON çıktısı
 
@@ -200,7 +301,10 @@ Sonraki 2 Çalışma Zamanı:
 | --- | --- | --- |
 | `--next <n>` | 0–1000 arasında tam sayı; daha büyük değerler reddedilir | 5 |
 | `--tz <zone>`, `--timezone <zone>` | IANA zaman dilimi | Sistem dilimi veya UTC |
-| `--lang <en\|tr>` | Açıklama dili | en |
+| `--lang <en\|tr\|de\|es>` | Açıklama ve çıktı etiketlerinin dili | en |
+| `--type <auto\|unix\|quartz\|eventbridge>` | Cron sözdizimi | auto |
+| `--calendar` | Sonraki `--next N` çalışmanın aylık takvimi | kapalı |
+| `--days <n>` | İsteğe bağlı diff aralığı, 1–3650 gün | yok |
 | `--start <date>` | Başlangıç; saat farkı içeren ISO 8601 kullanın | Şu an |
 | `--dst <shift\|skip>` | İleri saat geçişinde olmayan saatin nasıl ele alınacağı | shift |
 | `--format <text\|json>` | Çıktı biçimi | text |
@@ -219,7 +323,7 @@ ve geçmiş bir Quartz yılı (`0 0 0 1 1 ? 2020`) için stderr'e
 `Warning: This expression never matches any date` yazılır.
 Çalışma listesi boş olur; JSON çıktısında `"neverMatches": true` bulunur.
 Çıkış kodu **0** kalır. Burada “eşleşmiyor”, `--start` sonrasından desteklenen
-son yıl olan 2099'a kadar gelecek bir tarih bulunamadığı anlamına gelir;
+son yıla (2099, EventBridge için 2199) kadar gelecek bir tarih bulunamadığı anlamına gelir;
 geçmişte hiç çalışmadığı anlamına gelmez.
 Bu kontrol `--next 0` ile de yapılır. `@reboot` için tarih hesaplanmaz ve
 eşleşmiyor uyarısı verilmez. JSON her zaman `neverMatches` boolean alanını içerir.
@@ -260,7 +364,8 @@ ve `--tz` değerlerini sabitleyin.
 
 ### Sınırlar ve gizlilik
 
-Yıl alanı 1970–2099 aralığını destekler; gelecek tarih araması 2099'da biter ve
+Yıl alanı 1970–2099 (EventBridge için 1970–2199) aralığını destekler;
+gelecek tarih araması ilgili sözdiziminin son desteklenen yılında biter ve
 istenenden az sonuç döndürebilir. `@reboot` açıklanabilir ancak sonraki tarihleri hesaplanmaz.
 Paket takvim hesaplar, görev çalıştırmaz.
 Tüm işlemler yereldir; ağ isteği yapılmaz. Zaman dilimi doğruluğu,

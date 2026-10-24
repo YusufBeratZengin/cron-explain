@@ -7,7 +7,7 @@ import { CronValidationError } from './errors.js';
  * @param {string} expression The cron expression to validate.
  * @param {Object} [options]
  * @param {boolean} [options.throwOnError=false] Whether to throw on invalid expression.
- * @param {'auto' | 'unix' | 'quartz'} [options.type='auto']
+ * @param {'auto' | 'unix' | 'quartz' | 'eventbridge'} [options.type='auto']
  * @returns {{ valid: boolean, error: CronValidationError | null, visualMarker: string | null, parsed: Object | null }}
  */
 export function validateCron(expression, options = {}) {

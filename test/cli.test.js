@@ -124,7 +124,7 @@ for (const [args, message] of [
   [['--next', '100000'], 'Error: --next must be an integer between 0 and 1000.'],
   [['--next=3oops'], 'Error: --next must be an integer between 0 and 1000.'],
   [['--start', 'not-a-date'], 'Error: --start must be a valid date.'],
-  [['--lang', 'xx'], 'Error: --lang must be en or tr.'],
+  [['--lang', 'xx'], 'Error: --lang must be one of: en, tr, de, es.'],
   [['--next'], 'Error: Missing value for --next.'],
   [['--tz'], 'Error: Missing value for --tz.'],
   [['--dst', 'invalid'], 'Error: --dst must be shift or skip.'],
@@ -171,5 +171,115 @@ for (const [expression, start, expected] of [
     ]);
     assert.equal(stderr, '');
     assert.deepEqual(JSON.parse(stdout).nextRuns.map((run) => run.utc), expected);
+  });
+}
+
+const fixed = ['--tz', 'UTC', '--start', '2026-10-30T00:00:00Z'];
+
+test('diff JSON classifies merged next N runs including shared instants', async () => {
+  const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+    'diff', '*/15 * * * *', '*/20 * * * *', '--next', '8', '--format', 'json', ...fixed,
+  ]);
+  assert.equal(stderr, '');
+  const data = JSON.parse(stdout);
+  assert.deepEqual(data.runs.map((run) => run.source), ['a', 'b', 'a', 'b', 'a', 'both', 'a', 'b']);
+  assert.equal(data.runs[5].utc, '2026-10-30T01:00:00.000Z');
+  assert.equal(data.runs[5].formatted, '2026-10-30 01:00:00 (+00:00)');
+  assert.equal(data.windowEnd, null);
+  assert.equal(data.a.expression, '*/15 * * * *');
+});
+
+test('diff text labels A, B and shared runs in Turkish', async () => {
+  const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+    'diff', '*/15 * * * *', '*/20 * * * *', '--next', '6', '--lang', 'tr', ...fixed,
+  ]);
+  assert.equal(stderr, '');
+  assert.match(stdout, /\[yalnız A\]/);
+  assert.match(stdout, /\[yalnız B\]/);
+  assert.match(stdout, /\[ikisi de\]/);
+});
+
+test('diff accepts a day window, empty schedules and zero selected runs', async () => {
+  for (const [a, b, next, days, count] of [
+    ['@daily', '@daily', '5', '1', 1], ['@reboot', '0 0 31 2 *', '5', '7', 0],
+    ['@daily', '@hourly', '0', '1', 0],
+  ]) {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+      'diff', a, b, '--next', next, '--days', days, '--format', 'json', ...fixed,
+    ]);
+    const data = JSON.parse(stdout);
+    assert.equal(stderr, '');
+    assert.equal(data.runs.length, count);
+    assert.equal(data.days, Number(days));
+    assert.ok(data.windowEnd);
+  }
+});
+
+test('calendar JSON groups the selected next N runs across months', async () => {
+  const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+    '@daily', '--calendar', '--next', '3', '--format', 'json', ...fixed,
+  ]);
+  assert.equal(stderr, '');
+  const data = JSON.parse(stdout);
+  assert.equal(data.nextRuns.length, 3);
+  assert.deepEqual(data.calendar, [
+    { date: '2026-10-31', runs: 1 }, { date: '2026-11-01', runs: 1 }, { date: '2026-11-02', runs: 1 },
+  ]);
+});
+
+test('calendar text has month headings and localized weekday labels', async () => {
+  const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+    '@daily', '--calendar', '--next=3', '--lang', 'de', ...fixed,
+  ]);
+  assert.equal(stderr, '');
+  assert.match(stdout, /Kalender \(UTC\), nächste 3 Ausführungen/);
+  assert.match(stdout, /2026-10\nMo\s+Di\s+Mi\s+Do\s+Fr\s+Sa\s+So/);
+  assert.match(stdout, /2026-11/);
+  assert.match(stdout, /31:1/);
+});
+
+test('empty calendars handle --next 0 and reboot without crashing', async () => {
+  for (const args of [['@daily', '--next', '0'], ['@reboot']]) {
+    for (const format of ['text', 'json']) {
+      const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+        ...args, '--calendar', '--format', format, ...fixed,
+      ]);
+      assert.equal(stderr, '');
+      if (format === 'json') assert.deepEqual(JSON.parse(stdout).calendar, []);
+      else assert.match(stdout, /No upcoming runs/);
+    }
+  }
+});
+
+test('CLI accepts wrapped EventBridge, explicit bare dialects and new languages', async () => {
+  for (const [expr, args, explanation] of [
+    ['cron(0 12 ? * MON-FRI *)', ['--lang', 'de'], 'Um 12:00 Uhr, von Montag bis Freitag'],
+    ['0 12 ? * MON-FRI *', ['--type=eventbridge', '--lang', 'es'], 'A las 12:00, de lunes a viernes'],
+    ['15 0 9 lw * ?', ['--type', 'quartz', '--lang', 'es'], 'A las 09:00:15, el último día laborable del mes'],
+  ]) {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [binPath,
+      expr, ...args, '--next', '1', '--format', 'json', ...fixed,
+    ]);
+    assert.equal(stderr, '');
+    assert.equal(JSON.parse(stdout).explanation, explanation);
+    assert.equal(JSON.parse(stdout).nextRuns.length, 1);
+  }
+});
+
+for (const args of [
+  ['diff'], ['diff', '@daily'], ['diff', '@daily', '@hourly', '@yearly'],
+  ['diff', '@daily', '@hourly', '--calendar'],
+  ['diff', '@daily', '@hourly', '--days', '0'],
+  ['diff', '@daily', '@hourly', '--days=1.5'],
+  ['diff', '@daily', '@hourly', '--days=3651'],
+  ['@daily', '--days', '2'], ['@daily', '--type', 'unknown'], ['@daily', '--type'],
+]) {
+  test(`new CLI usage rejects ${args.join(' ')}`, async () => {
+    await assert.rejects(execFileAsync(process.execPath, [binPath, ...args, ...fixed]), (err) => {
+      assert.equal(err.code, 1);
+      assert.equal(err.stdout, '');
+      assert.match(err.stderr, /^Error: /);
+      return true;
+    });
   });
 }

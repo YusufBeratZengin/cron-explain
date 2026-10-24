@@ -71,5 +71,29 @@
     "separator": ", ",
     "and": " ve ",
     "through": " ile {end} arasında"
+  },
+  "cli": {
+    "weekdaysShort": ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"],
+    "expression": "İfade",
+    "explanation": "Açıklama",
+    "timeZone": "Zaman Dilimi",
+    "nextRuns": "Sonraki {count} Çalışma Zamanı:",
+    "reboot": "Yalnızca sistem yeniden başlatıldığında çalışır (zamanlanmış çalışma zamanı yok).",
+    "expressionA": "İfade A",
+    "expressionB": "İfade B",
+    "explanationA": "Açıklama A",
+    "explanationB": "Açıklama B",
+    "window": "Aralık",
+    "windowDays": "{start} tarihinden itibaren {days} gün",
+    "commonRuns": "Ortak çalışma zamanı: {total}",
+    "noCommonRuns": "Aralıkta ortak çalışma zamanı yok.",
+    "firstCommon": "İlk {count}:",
+    "capped": "Not: güvenlik sınırı nedeniyle arama erken bitti.",
+    "onlyA": "yalnız A",
+    "onlyB": "yalnız B",
+    "both": "ikisi de",
+    "noRuns": "Seçilen sonuçlarda gelecek çalışma yok.",
+    "calendar": "Takvim ({timeZone}), sonraki {count} çalışma",
+    "calendarLegend": "GG:n = seçilen çalışmalardan o güne düşen n çalışma, GG . = seçilen çalışma yok"
   }
 }

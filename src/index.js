@@ -16,3 +16,5 @@ export {
   formatListTr,
 } from './locales/grammar-tr.js';
 export { CronValidationError } from './errors.js';
+export { compareSchedules, findOverlaps } from './diff.js';
+export { getCalendar, renderCalendar } from './calendar.js';

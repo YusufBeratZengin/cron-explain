@@ -70,5 +70,29 @@
     "separator": ", ",
     "and": " and ",
     "through": " through "
+  },
+  "cli": {
+    "weekdaysShort": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    "expression": "Expression",
+    "explanation": "Explanation",
+    "timeZone": "Time Zone",
+    "nextRuns": "Next {count} run times:",
+    "reboot": "Runs only on system reboot (no scheduled run times).",
+    "expressionA": "Expression A",
+    "expressionB": "Expression B",
+    "explanationA": "Explanation A",
+    "explanationB": "Explanation B",
+    "window": "Window",
+    "windowDays": "{days} days from {start}",
+    "commonRuns": "Common run times: {total}",
+    "noCommonRuns": "No common run times in the window.",
+    "firstCommon": "First {count}:",
+    "capped": "Note: the search stopped early because of the safety cap.",
+    "onlyA": "A only",
+    "onlyB": "B only",
+    "both": "both",
+    "noRuns": "No upcoming runs in the selected results.",
+    "calendar": "Calendar ({timeZone}), next {count} runs",
+    "calendarLegend": "DD:n = n of the selected runs on that day, DD . = none selected"
   }
 }

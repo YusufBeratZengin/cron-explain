@@ -1,5 +1,6 @@
 import { parseCron } from './parser.js';
-import { getLocale } from './locales/index.js';
+import { getLocale, resolveLanguage } from './locales/index.js';
+import { explainWithPhrases } from './locales/phrases.js';
 import {
   turkishOrdinal,
   turkishLocative,
@@ -12,11 +13,11 @@ import {
  *
  * @param {string | Object} expression Raw cron expression or parsed cron object.
  * @param {Object} [options]
- * @param {'en' | 'tr'} [options.lang='en'] Target language.
+ * @param {'en' | 'tr' | 'de' | 'es'} [options.lang='en'] Target language (unknown codes fall back to English).
  * @returns {string} Human-readable explanation.
  */
 export function explainCron(expression, options = {}) {
-  const lang = (options.lang || 'en').toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  const lang = resolveLanguage(options.lang) || 'en';
   const locale = getLocale(lang);
 
   const parsed = typeof expression === 'string' ? parseCron(expression) : expression;
@@ -32,7 +33,9 @@ export function explainCron(expression, options = {}) {
     return locale.aliases['@reboot'] || 'At system startup';
   }
 
-  return lang === 'tr' ? explainTr(parsed, locale) : explainEn(parsed, locale);
+  if (lang === 'tr') return explainTr(parsed, locale);
+  if (lang === 'en') return explainEn(parsed, locale);
+  return explainWithPhrases(parsed, locale);
 }
 
 // -------------------------------------------------------------
