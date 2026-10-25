@@ -9,6 +9,15 @@ import {
 } from './locales/grammar-tr.js';
 
 /**
+ * True for steps that run evenly through the whole field (such as every 15 minutes
+ * or every 6 hours), so "every N" is accurate. Offset starts, sub-ranges and steps
+ * that do not divide the field span (such as 5/15 or 45) are listed by value instead.
+ */
+function isCleanStep(item, span) {
+  return item.type === 'step' && item.min === 0 && item.max === span - 1 && span % item.step === 0;
+}
+
+/**
  * Explain a cron expression in human-readable English or Turkish.
  *
  * @param {string | Object} expression Raw cron expression or parsed cron object.
@@ -63,8 +72,7 @@ function explainEn(parsed, locale) {
   // Pattern: */N * * * * (Every N minutes)
   if (
     f.minute.items.length === 1 &&
-    f.minute.items[0].type === 'step' &&
-    f.minute.items[0].min === 0 &&
+    isCleanStep(f.minute.items[0], 60) &&
     isEveryHour &&
     isEveryDom &&
     isEveryMonth &&
@@ -122,7 +130,7 @@ function formatTimePartEn(f) {
   const hr = f.hour;
 
   // Single step minute: e.g. */15
-  if (min.items.length === 1 && min.items[0].type === 'step') {
+  if (min.items.length === 1 && isCleanStep(min.items[0], 60)) {
     const step = min.items[0].step;
     let base = `Every ${step} minutes`;
     if (hr.raw !== '*') {
@@ -177,7 +185,7 @@ function formatTimePartEn(f) {
 
 function formatHourPartEn(hr) {
   if (hr.raw === '*') return '';
-  if (hr.items.length === 1 && hr.items[0].type === 'step') {
+  if (hr.items.length === 1 && isCleanStep(hr.items[0], 24)) {
     return `every ${hr.items[0].step} hours`;
   }
   if (hr.items.length === 1 && hr.items[0].type === 'range') {
@@ -194,7 +202,7 @@ function formatHourPartEn(hr) {
 
 function formatMinPartEn(min) {
   if (min.raw === '*') return 'every minute';
-  if (min.items.length === 1 && min.items[0].type === 'step') {
+  if (min.items.length === 1 && isCleanStep(min.items[0], 60)) {
     return `every ${min.items[0].step} minutes`;
   }
   if (min.values && min.values.length > 0) {
@@ -317,8 +325,7 @@ function explainTr(parsed, locale) {
   // Pattern: */N * * * *
   if (
     f.minute.items.length === 1 &&
-    f.minute.items[0].type === 'step' &&
-    f.minute.items[0].min === 0 &&
+    isCleanStep(f.minute.items[0], 60) &&
     isEveryHour &&
     isEveryDom &&
     isEveryMonth &&
@@ -388,7 +395,7 @@ function formatTimePartTr(f) {
   const hr = f.hour;
 
   // Single step minute: e.g. */15
-  if (min.items.length === 1 && min.items[0].type === 'step') {
+  if (min.items.length === 1 && isCleanStep(min.items[0], 60)) {
     const step = min.items[0].step;
     const stepPhrase = `her ${step} dakikada bir`;
     if (hr.raw !== '*') {
@@ -433,7 +440,7 @@ function formatTimePartTr(f) {
   // Hour range with minutes
   if (hr.items.length === 1 && hr.items[0].type === 'range') {
     const hrRange = formatHourRangeTr(hr);
-    if (min.items.length === 1 && min.items[0].type === 'step') {
+    if (min.items.length === 1 && isCleanStep(min.items[0], 60)) {
       return `${hrRange} her ${min.items[0].step} dakikada bir`;
     }
     if (min.values && min.values.length > 0) {
@@ -441,6 +448,25 @@ function formatTimePartTr(f) {
       return `${hrRange} ${formatListTr(minList)} dakikasında`;
     }
     return hrRange;
+  }
+
+  // Hour lists / steps combined with minute lists or a wildcard
+  if (hr.raw !== '*' && hr.values && min.values && min.raw !== '*' &&
+      hr.values.length * min.values.length <= 12) {
+    const times = [];
+    for (const h of hr.values) {
+      for (const m of min.values) {
+        times.push(`saat ${turkishLocative(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)}`);
+      }
+    }
+    return formatListTr(times);
+  }
+  if (hr.raw !== '*' && hr.values && min.raw === '*') {
+    const windows = hr.values.map((h) => {
+      const hh = String(h).padStart(2, '0');
+      return `${hh}:00 ile ${hh}:59 arasında`;
+    });
+    return `${formatListTr(windows)} her dakika`;
   }
 
   return 'her dakika';
@@ -452,7 +478,7 @@ function formatHourRangeTr(hr) {
     const end = String(hr.items[0].max).padStart(2, '0') + ':59';
     return `${start} ile ${end} arasında`;
   }
-  if (hr.items.length === 1 && hr.items[0].type === 'step') {
+  if (hr.items.length === 1 && isCleanStep(hr.items[0], 24)) {
     return `her ${hr.items[0].step} saatte bir`;
   }
   if (hr.values && hr.values.length > 0) {

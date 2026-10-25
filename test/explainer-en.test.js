@@ -69,3 +69,11 @@ describe('English Explainer', () => {
     );
   });
 });
+
+describe('step explanations stay accurate', () => {
+  test('offset, ranged and non-dividing steps are listed, not "every N"', () => {
+    assert.equal(explainCron('5/15 * * * *'), 'At minutes 5, 20, 35, and 50 of every hour');
+    assert.equal(explainCron('*/45 * * * *'), 'At minutes 0 and 45 of every hour');
+    assert.equal(explainCron('*/15 * * * *'), 'Every 15 minutes');
+  });
+});

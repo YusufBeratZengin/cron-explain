@@ -85,3 +85,11 @@ describe('Turkish Explainer', () => {
     );
   });
 });
+
+describe('Turkish hour combinations never collapse to every minute', () => {
+  test('hour list with minute and hour step with minute', () => {
+    assert.equal(explainCron('30 9,17 * * *', { lang: 'tr' }), "Her gün saat 09:30'da ve saat 17:30'da");
+    assert.notEqual(explainCron('0 */5 * * *', { lang: 'tr' }), 'her dakika');
+    assert.match(explainCron('* 9 * * *', { lang: 'tr' }), /09:00 ile 09:59 arasında her dakika/);
+  });
+});
